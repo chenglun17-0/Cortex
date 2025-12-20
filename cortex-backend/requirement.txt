@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+psycopg2-binary
+pgvector
+alembic
+pydantic-settings
+python-dotenv
+redis
+celery
