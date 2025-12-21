@@ -28,12 +28,51 @@ def ensure_git_repo():
 def create_branch(branch_name: str):
     """创建并切换到新分支"""
     # 1. 检查分支是否存在
+    branch_exists = False
     try:
+        # rev-parse --verify 如果成功返回 0，失败抛出异常
         run_git_command(["rev-parse", "--verify", branch_name])
-        # 如果存在，直接切换
-        typer.echo(f"Branch '{branch_name}' already exists. Switching...")
-        run_git_command(["checkout", branch_name])
+        branch_exists = True
     except Exception:
-        # 如果不存在，创建并切换
+        branch_exists = False
+
+        # 2. 根据检测结果执行对应操作
+    if branch_exists:
+        typer.echo(f"Branch '{branch_name}' already exists. Switching...")
+        try:
+            run_git_command(["checkout", branch_name])
+        except Exception as e:
+            # 如果切换失败（比如当前有未提交的冲突文件），直接报错，而不是去尝试创建新分支
+            typer.echo(f"[red]Failed to switch branch: {e}[/red]")
+            raise typer.Exit(1)
+    else:
         typer.echo(f"Creating new branch '{branch_name}'...")
-        run_git_command(["checkout", "-b", branch_name])
+        try:
+            run_git_command(["checkout", "-b", branch_name])
+        except Exception as e:
+            typer.echo(f"[red]Failed to create branch: {e}[/red]")
+            raise typer.Exit(1)
+
+
+def get_current_branch() -> str:
+    """获取当前所在的分支名"""
+    return run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+
+def push_current_branch(branch_name: str):
+    """推送当前分支到 origin"""
+    typer.echo(f"Pushing {branch_name} to remote...")
+    run_git_command(["push", "-u", "origin", branch_name])
+
+def get_remote_url() -> str:
+    """获取远程仓库的 URL"""
+    try:
+        url = run_git_command(["config", "--get", "remote.origin.url"])
+        # 处理 SSH 格式 转 HTTPS
+        if url.startswith("git@"):
+            url = url.replace(":", "/").replace("git@", "https://")
+        # 去掉.git后缀
+        if url.endswith(".git"):
+            url = url[:-4]
+        return url.strip()
+    except Exception:
+        return ""
