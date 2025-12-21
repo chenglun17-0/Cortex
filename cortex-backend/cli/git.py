@@ -76,3 +76,17 @@ def get_remote_url() -> str:
         return url.strip()
     except Exception:
         return ""
+
+def has_uncommitted_changes() -> bool:
+    """检查当前工作区是否有未提交的更改"""
+    # --porcelain 输出机器可读的简洁状态，如果为空说明是干净的
+    output = run_git_command(["status", "--porcelain"])
+    return bool(output.strip())
+
+def stage_all_changes():
+    """执行git add ."""
+    run_git_command(["add", "."])
+
+def commit_changes(message: str):
+    """执行git commit -m <message>"""
+    run_git_command(["commit", "-m", message])
