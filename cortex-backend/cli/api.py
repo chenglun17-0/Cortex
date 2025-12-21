@@ -20,5 +20,9 @@ class APIClient:
         headers = {"Authorization": f"Bearer {self.token}"}
         return requests.post(f"{API_URL}{endpoint}", headers=headers, json=json_data)
 
+    def patch(self, endpoint: str, json_data: dict):
+        """发送 PATCH 请求"""
+        headers = {"Authorization": f"Bearer {self.token}"}
+        return requests.patch(f"{API_URL}{endpoint}", headers=headers, json=json_data)
 # 全局单例
 client = APIClient
