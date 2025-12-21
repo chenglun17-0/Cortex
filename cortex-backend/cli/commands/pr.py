@@ -3,7 +3,15 @@ import typer
 import webbrowser
 from rich.console import Console
 from cli.api import client
-from cli.git import ensure_git_repo, get_current_branch, push_current_branch, get_remote_url
+from cli.git import (
+    ensure_git_repo,
+    get_current_branch,
+    push_current_branch,
+    get_remote_url,
+    has_uncommitted_changes,
+    stage_all_changes,
+    commit_changes
+)
 
 app = typer.Typer()
 console = Console()
@@ -33,6 +41,25 @@ def create():
         raise typer.Exit(1)
 
     task_id = int(match.group(1))
+
+    if has_uncommitted_changes():
+        console.print("[yellow]⚡ Detected uncommitted changes.[/yellow]")
+
+        # 2.1 执行 git add .
+        console.print("Staging all changes...")
+        stage_all_changes()
+        # 2.2 让用户输入提交信息
+        commit_msg = typer.prompt("Enter commit message")
+        # 2.3 执行 commit
+        if commit_msg.strip():
+            commit_changes(commit_msg)
+            console.print("[green]✔ Changes committed.[/green]")
+        else:
+            console.print("[red]Commit message cannot be empty. Aborting.[/red]")
+            raise typer.Exit(1)
+    else:
+        console.print("[blue]ℹ️  Working tree is clean. Proceeding to push...[/blue]")
+
     console.print(f"[cyan]🚀 Submitting task #{task_id}...[/cyan]")
 
     # 3. 更新后端状态为 REVIEW
