@@ -1,6 +1,7 @@
 fastapi[standard]
-sqlmodel
-psycopg2-binary
-alembic
+tortoise-orm[asyncpg]
+aerich
 python-dotenv
-passlib[bcrypt]
+passlib==1.7.4
+bcrypt==4.0.1
+pyjwt

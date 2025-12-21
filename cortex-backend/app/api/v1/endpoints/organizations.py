@@ -1,16 +1,14 @@
 from typing import List
 
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
-
-from app.db import get_session
-from app.models import Organization
-
+from app.models.organization import Organization as OrganizationModel
+from app.schemas.organization import OrganizationCreate, OrganizationUpdate, Organization
 router = APIRouter()
 
 @router.post("/", response_model=Organization)
-def create_organization(org: Organization, session: Session = Depends(get_session)):
-    org.save()
+async def create_organization(org: OrganizationCreate):
+    org_obj = await OrganizationModel.create(**org.model_dump())
+    return org_obj
 @router.get("/", response_model=List[Organization])
-def get_organizations(session: Session = Depends(get_session)):
-    return Organization.all()
+async def get_organizations():
+    return await OrganizationModel.all()

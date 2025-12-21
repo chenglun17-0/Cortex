@@ -1,31 +1,24 @@
-from typing import TYPE_CHECKING, Optional, List
+from tortoise import fields, models
 
-from sqlmodel import SQLModel, Field, Relationship
+class Project(models.Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100, index=True)
+    description = fields.TextField(null=True)
 
-from .base import ActiveModel
-from .project_member import ProjectMember
-if TYPE_CHECKING:
-    from .organization import Organization
-    from .user import User
-    from .task import Task
-
-class Project(ActiveModel, table = True):
-    id: Optional[ int] = Field(default=None, primary_key = True)
-    name: str = Field(index = True)
-    description: Optional[str] = None
-
-    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
-    owner_id: Optional[int] = Field(default=None, foreign_key="user.id")
-
-    # 关系
-    organization: Optional["Organization"] = Relationship(back_populates="projects")
-
-    # 关系：项目负责人
-    owner: Optional["User"] = Relationship(back_populates="owned_projects")
-
-    # 关系：项目成员
-    members: List["User"] = Relationship(
-        back_populates="joined_projects", link_model=ProjectMember
+    organization = fields.ForeignKeyField(
+        "models.Organization", related_name="projects", null=True
     )
 
-    tasks: List["Task"] = Relationship(back_populates="project")
+    # 项目负责人
+    owner = fields.ForeignKeyField(
+        "models.User", related_name="owned_projects", null=True
+    )
+
+    # 多对多：项目成员
+    # Tortoise 支持通过 through 指定中间表，这对应 ProjectMember
+    members = fields.ManyToManyField(
+        "models.User", related_name="joined_projects", through="project_members"
+    )
+
+    class Meta:
+        table = "projects"

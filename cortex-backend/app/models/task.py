@@ -1,25 +1,28 @@
-from typing import TYPE_CHECKING, Optional
-from datetime import datetime
-from sqlmodel import SQLModel, Relationship, Field
+from tortoise import fields, models
 
-from .base import ActiveModel
+class Task(models.Model):
+    id = fields.IntField(pk=True)
+    title = fields.CharField(max_length=255)
+    description = fields.TextField(null=True)
 
-if TYPE_CHECKING:
-    from .project import Project
-    from .user import User
+    status = fields.CharField(max_length=20, default="TODO", index=True)
+    priority = fields.CharField(max_length=20, default="MEDIUM")
+    # 外键关系
+    project = fields.ForeignKeyField(
+        "models.Project",
+        related_name="tasks"  # project.tasks 可获取所有任务
+    )
 
-class Task(ActiveModel, table = True):
-    id: Optional[int] = Field(default=None, primary_key = True)
-    title: str
-    description: Optional[str] = None
-    status: str = Field(default="TODO")
-    priority: str = Field(default="MEDIUM")
+    assignee = fields.ForeignKeyField(
+        "models.User",
+        related_name="assigned_tasks",  # user.assigned_tasks 可获取指派给他的任务
+        null=True  # 任务刚创建时可能没人认领
+    )
 
-    project_id: Optional[int] = Field(default=None, foreign_key="project.id")
-    assignee_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    # 时间戳
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)  # 每次保存自动更新
 
-    created_at: datetime = Field(default=datetime.now())
-
-    # 关系
-    project: Optional["Project"] = Relationship(back_populates="tasks")
-    assignee: Optional["User"] = Relationship(back_populates="tasks")
+    class Meta:
+        table = "tasks"
+        ordering = ["-created_at"]  # 默认按创建时间倒序排列

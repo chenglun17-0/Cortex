@@ -1,17 +1,17 @@
-from typing import Optional, List, TYPE_CHECKING
-
-from sqlmodel import SQLModel, Field, Relationship
-
-from .base import ActiveModel
+from typing import TYPE_CHECKING
+from tortoise import fields, models
 
 if TYPE_CHECKING:
     from .user import User
     from .project import Project
 
-class Organization(ActiveModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key = True)
-    name: str = Field(index = True)
+class Organization(models.Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=100, index=True)
 
     # 关系
-    users: List["User"] = Relationship(back_populates="organization")
-    projects: List["Project"] = Relationship(back_populates="organization")
+    users: fields.ReverseRelation["User"]
+    projects: fields.ReverseRelation["Project"]
+
+    class Meta:
+        table = "organizations"

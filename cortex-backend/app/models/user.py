@@ -1,33 +1,26 @@
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlmodel import Field, SQLModel, Relationship
-
-from .base import ActiveModel
-from .project_member import ProjectMember
+from tortoise import fields, models
 
 if TYPE_CHECKING:
-    from .organization import Organization
     from .project import Project
     from .task import Task
 
-class User(ActiveModel, table = True):
-    id: Optional[int] = Field(default=None, primary_key = True)
-    username: str = Field(index = True)
-    email: str = Field(unique=True, index=True)
-    hashed_password: str
-
-    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
-
-    # 关系: 所属组织
-    organization: Optional["Organization"] = Relationship(back_populates="users")
-
-    # 关系: 创建的项目
-    owned_projects: List["Project"] = Relationship(back_populates="owner")
-
-    # 关系: 参与的项目
-    joined_projects: List["Project"] = Relationship(
-        back_populates="members",link_model=ProjectMember
+class User(models.Model):
+    id = fields.IntField(pk=True)
+    username = fields.CharField(max_length=50, unique=True, index=True)
+    email = fields.CharField(max_length=100, unique=True, index=True)
+    hashed_password = fields.CharField(max_length=128)
+    # 外键：会自动生成 organization_id 字段
+    organization = fields.ForeignKeyField(
+        "models.Organization", related_name="users", null=True
     )
 
-    # 关系: 我的任务
-    tasks: List["Task"] = Relationship(back_populates="assignee")
+    # 创建的项目
+    owned_projects: fields.ReverseRelation["Project"]
+    # 参与的项目
+    joined_projects: fields.ReverseRelation["Project"]
+    # 我的任务
+    tasks: fields.ReverseRelation["Task"]
+    class Meta:
+        table = "users"
