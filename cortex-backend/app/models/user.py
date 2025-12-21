@@ -15,7 +15,7 @@ class User(models.Model):
     organization = fields.ForeignKeyField(
         "models.Organization", related_name="users", null=True
     )
-
+    organization_id: Optional[int]
     # 创建的项目
     owned_projects: fields.ReverseRelation["Project"]
     # 参与的项目

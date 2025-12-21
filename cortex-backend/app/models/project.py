@@ -17,7 +17,11 @@ class Project(models.Model):
     # 多对多：项目成员
     # Tortoise 支持通过 through 指定中间表，这对应 ProjectMember
     members = fields.ManyToManyField(
-        "models.User", related_name="joined_projects", through="project_members"
+        "models.User",
+        related_name="joined_projects",
+        through="project_members",
+        forward_key="project_id",
+        backward_key="user_id"
     )
 
     class Meta:
