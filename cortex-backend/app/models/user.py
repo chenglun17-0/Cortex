@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import Field, SQLModel, Relationship
+
+from .base import ActiveModel
 from .project_member import ProjectMember
 
 if TYPE_CHECKING:
@@ -8,7 +10,7 @@ if TYPE_CHECKING:
     from .project import Project
     from .task import Task
 
-class User(SQLModel, table = True):
+class User(ActiveModel, table = True):
     id: Optional[int] = Field(default=None, primary_key = True)
     username: str = Field(index = True)
     email: str = Field(unique=True, index=True)

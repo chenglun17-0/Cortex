@@ -2,8 +2,10 @@ from typing import Optional
 
 from sqlmodel import SQLModel, Field
 
+from app.models.base import ActiveModel
 
-class ProjectMember(SQLModel, table=True):
+
+class ProjectMember(ActiveModel, table=True):
     project_id: Optional[int] = Field(
         default=None, foreign_key="project.id", primary_key=True
     )

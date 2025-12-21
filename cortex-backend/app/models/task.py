@@ -2,11 +2,13 @@ from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 from sqlmodel import SQLModel, Relationship, Field
 
+from .base import ActiveModel
+
 if TYPE_CHECKING:
     from .project import Project
     from .user import User
 
-class Task(SQLModel, table = True):
+class Task(ActiveModel, table = True):
     id: Optional[int] = Field(default=None, primary_key = True)
     title: str
     description: Optional[str] = None

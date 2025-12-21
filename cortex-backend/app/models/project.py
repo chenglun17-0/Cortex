@@ -2,13 +2,14 @@ from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import SQLModel, Field, Relationship
 
+from .base import ActiveModel
 from .project_member import ProjectMember
 if TYPE_CHECKING:
     from .organization import Organization
     from .user import User
     from .task import Task
 
-class Project(SQLModel, table = True):
+class Project(ActiveModel, table = True):
     id: Optional[ int] = Field(default=None, primary_key = True)
     name: str = Field(index = True)
     description: Optional[str] = None
