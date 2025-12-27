@@ -1,10 +1,10 @@
-// src/features/projects/ProjectsPage.tsx
 import React, { useState } from 'react';
 import { Layout, Typography, Button, Card, List, Modal, Form, Input, message, Empty } from 'antd';
 import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProjects, createProject } from './service';
 import type { ProjectCreate } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 const { Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -13,7 +13,7 @@ export const ProjectsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
-
+  const navigate = useNavigate();
   // 1. 获取项目列表数据
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
@@ -45,9 +45,9 @@ export const ProjectsPage: React.FC = () => {
         {/* 顶部标题栏 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <Title level={2} style={{ margin: 0 }}>我的项目</Title>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
             size="large"
             onClick={() => setIsModalOpen(true)}
           >
@@ -63,13 +63,12 @@ export const ProjectsPage: React.FC = () => {
           locale={{ emptyText: <Empty description="暂无项目，快去创建一个吧" /> }}
           renderItem={(item) => (
             <List.Item>
-              <Card 
-                hoverable 
+              <Card
+                hoverable
+                style={{ cursor: 'pointer' }} // 1. 让鼠标悬停时变成"手型"
+                onClick={() => navigate(`/projects/${item.id}`)} // 2. 点击整个卡片触发跳转
                 title={item.name}
                 extra={<FolderOpenOutlined style={{ color: '#1890ff' }} />}
-                actions={[
-                  <Button type="link" key="enter">进入看板</Button>
-                ]}
               >
                 <Paragraph ellipsis={{ rows: 2 }}>
                   {item.description || '暂无描述'}

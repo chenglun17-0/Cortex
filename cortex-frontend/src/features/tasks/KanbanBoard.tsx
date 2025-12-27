@@ -1,0 +1,156 @@
+// src/features/tasks/KanbanBoard.tsx
+import React, { useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Layout, Typography, Card, Spin, Tag, Button, Breadcrumb } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getTasksByProject, updateTask } from './service';
+import { type Task, TaskStatus} from '../../types';
+
+
+const { Content } = Layout;
+const { Title } = Typography;
+
+// 定义看板的列结构
+const COLUMNS = [
+  { id: TaskStatus.TODO, title: '待处理', color: '#f50' },
+  { id: TaskStatus.IN_PROGRESS, title: '进行中', color: '#2db7f5' },
+  { id: TaskStatus.REVIEW, title: '待审核', color: '#87d068' },
+  { id: TaskStatus.DONE, title: '已完成', color: '#108ee9' },
+];
+
+export const KanbanBoard: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // 1. 获取任务数据
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => getTasksByProject(projectId!),
+    enabled: !!projectId, // 只有 projectId 存在时才请求
+  });
+
+  // 2. 乐观更新 (Mutation)：拖拽后立即更新 UI，随后异步请求后端
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: TaskStatus }) => 
+      updateTask(id, { status }),
+    onSuccess: () => {
+      // 成功后让缓存失效，触发重新拉取确保数据一致
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+    },
+  });
+
+  // 3. 将扁平的任务列表按状态分组
+  const tasksByStatus = useMemo(() => {
+    const grouped: Record<string, Task[]> = {
+      [TaskStatus.TODO]: [],
+      [TaskStatus.IN_PROGRESS]: [],
+      [TaskStatus.REVIEW]: [],
+      [TaskStatus.DONE]: [],
+    };
+    tasks.forEach((task) => {
+      if (grouped[task.status]) {
+        grouped[task.status].push(task);
+      }
+    });
+    return grouped;
+  }, [tasks]);
+
+  // 4. 处理拖拽结束事件
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+
+    // 如果没有放置目标，或者位置没变，直接返回
+    if (!destination) return;
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    ) {
+      return;
+    }
+
+    // 触发更新
+    // 注意：这里 draggableId 通常是 string，需要转为 number
+    updateTaskMutation.mutate({
+      id: Number(draggableId),
+      status: destination.droppableId as TaskStatus,
+    });
+    
+    // 💡 进阶提示：为了体验更好，这里可以使用 queryClient.setQueryData 做乐观 UI 更新
+    // 但为了代码简单，暂时先依赖 React Query 的自动刷新
+  };
+
+  if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />;
+
+  return (
+    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+      <Content style={{ padding: '24px', overflowX: 'auto' }}>
+        {/* 顶部导航 */}
+        <div style={{ marginBottom: 16 }}>
+          <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>
+            返回项目列表
+          </Button>
+          <Title level={3} style={{ marginTop: 0 }}>项目看板 (ID: {projectId})</Title>
+        </div>
+
+        {/* 拖拽上下文 */}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', minWidth: '1000px' }}>
+            {COLUMNS.map((col) => (
+              <Droppable key={col.id} droppableId={col.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      background: '#ebecf0',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      width: '300px',
+                      minHeight: '500px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    {/* 列标题 */}
+                    <div style={{ marginBottom: 16, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{col.title}</span>
+                      <Tag color={col.color}>{tasksByStatus[col.id]?.length || 0}</Tag>
+                    </div>
+
+                    {/* 任务卡片列表 */}
+                    {tasksByStatus[col.id]?.map((task, index) => (
+                      <Draggable key={task.id} draggableId={String(task.id)} index={index}>
+                        {(provided, snapshot) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            size="small"
+                            style={{
+                              marginBottom: '8px',
+                              boxShadow: snapshot.isDragging ? '0 5px 10px rgba(0,0,0,0.2)' : 'none',
+                              ...provided.draggableProps.style, // 必须保留这个 style
+                            }}
+                          >
+                            <div style={{ fontWeight: 500 }}>{task.title}</div>
+                            <div style={{ color: '#888', fontSize: '12px', marginTop: 4 }}>
+                              ID: #{task.id}
+                            </div>
+                          </Card>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            ))}
+          </div>
+        </DragDropContext>
+      </Content>
+    </Layout>
+  );
+};

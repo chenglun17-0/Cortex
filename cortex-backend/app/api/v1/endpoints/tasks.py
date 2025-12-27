@@ -34,6 +34,20 @@ async def read_my_tasks(
     tasks = await Task.filter(assignee=current_user).all()
     return tasks
 
+@router.get("/{project_id}", response_model=List[TaskRead])
+async def get_project_tasks(
+        project_id: int,
+        current_user: User = Depends(get_current_user)
+):
+    """
+    获取项目下所有任务
+    :param project_id:
+    :param current_user:
+    :return:
+    """
+    tasks = await Task.filter(project_id=project_id).all()
+    return tasks
+
 @router.get("/{task_id}", response_model=TaskRead)
 async def get_task(
         task_id: int,

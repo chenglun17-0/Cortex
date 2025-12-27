@@ -1,9 +1,8 @@
-// src/App.tsx
 import React from 'react'; // 确保引入 React
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
-
+import { KanbanBoard } from './features/tasks/KanbanBoard';
 
 // 路由守卫组件 (PrivateRoute)
 // 使用 React.ReactNode 作为 children 的类型，容错率更高
@@ -30,6 +29,11 @@ const App: React.FC = () => {
             </PrivateRoute>
           } 
         />
+        <Route path="/projects/:projectId" element={
+          <PrivateRoute>
+            <KanbanBoard />
+          </PrivateRoute>
+        } />
       </Routes>
     </BrowserRouter>
   );
