@@ -1,7 +1,7 @@
 import subprocess
 import typer
 
-from cli.config import GIT_MAIN_BRANCH
+from cli.config import GIT_MAIN_BRANCH, get_config_value
 
 def run_git_command(args: list[str]) -> str:
     """运行 git 命令并返回输出"""
@@ -61,7 +61,7 @@ def get_current_branch() -> str:
     return run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
 
 def get_main_branch():
-    return GIT_MAIN_BRANCH
+    return get_config_value(GIT_MAIN_BRANCH)
 
 def delete_local_branch(branch_name: str):
     """删除本地分支"""

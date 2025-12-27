@@ -11,7 +11,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 """配置键"""
 # 后端 API 地址
 API_URL = "url"
-GIT_MAIN_BRANCH = "main"
+GIT_MAIN_BRANCH = "git_main_branch"
 ACCESS_TOKEN = "access_token"
 DELETE_LOCAL_ON_DONE = "delete_local_on_done"
 DELETE_REMOTE_ON_DONE = "delete_remote_on_done"
