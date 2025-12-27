@@ -34,3 +34,11 @@ export interface TaskUpdate {
   title?: string;
   description?: string;
 }
+
+export interface TaskCreate {
+  title: string;
+  description?: string;
+  priority?: string;
+  project_id: number;
+  status?: TaskStatus; // 可选，默认为 TODO
+}
