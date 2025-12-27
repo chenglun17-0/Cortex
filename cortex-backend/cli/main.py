@@ -1,6 +1,6 @@
 import typer
 
-from cli.commands import auth, tasks, pr
+from cli.commands import auth, tasks, pr, config
 
 app = typer.Typer(
     name="ctx",
@@ -11,6 +11,7 @@ app = typer.Typer(
 app.add_typer(auth.app, name="auth", help="Authentication commands")
 app.add_typer(tasks.app, name="tasks", help="Manage tasks")
 app.add_typer(pr.app, name="pr", help="Pull Request workflow")
+app.add_typer(config.app, name="config", help="Configuration commands")
 
 if __name__ == "__main__":
     app()

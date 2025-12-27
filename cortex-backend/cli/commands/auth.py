@@ -1,11 +1,11 @@
 import typer
 import requests
 from rich.console import Console
-from cli.config import save_token, delete_token, API_URL
+from cli.config import set_config_value, API_URL, ACCESS_TOKEN, get_config_value
 
 console = Console()
 app = typer.Typer()
-
+api_url = get_config_value(API_URL)
 
 @app.command()
 def login():
@@ -21,16 +21,16 @@ def login():
     # 2. 发送请求给后端
     try:
         response = requests.post(
-            f"{API_URL}/login/access-token",
+            f"{api_url}/login/access-token",
             data={"username": email, "password": password},  # OAuth2 标准表单
         )
 
         if response.status_code == 200:
             token_data = response.json()
-            token = token_data["access_token"]
+            token = token_data[ACCESS_TOKEN]
 
             # 3. 保存 Token
-            save_token(token)
+            set_config_value(ACCESS_TOKEN, token)
             console.print(f"[green]✔ Login successful! Token saved.[/green]")
         else:
             console.print(f"[red]✘ Login failed: {response.json().get('detail')}[/red]")
@@ -44,5 +44,5 @@ def logout():
     """
     注销登录 (删除本地凭证)
     """
-    delete_token()
+    set_config_value(ACCESS_TOKEN, "")
     console.print("[yellow]Logged out successfully.[/yellow]")

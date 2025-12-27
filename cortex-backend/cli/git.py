@@ -1,6 +1,8 @@
 import subprocess
 import typer
 
+from cli.config import GIT_MAIN_BRANCH
+
 def run_git_command(args: list[str]) -> str:
     """运行 git 命令并返回输出"""
     try:
@@ -57,6 +59,38 @@ def create_branch(branch_name: str):
 def get_current_branch() -> str:
     """获取当前所在的分支名"""
     return run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+
+def get_main_branch():
+    return GIT_MAIN_BRANCH
+
+def delete_local_branch(branch_name: str):
+    """删除本地分支"""
+    typer.echo(f"Deleting local branch '{branch_name}'...")
+    try:
+        run_git_command(["branch", "-d", branch_name])
+    except Exception as e:
+        typer.echo(f"[yellow]Warning: Could not delete local branch: {e}[/yellow]")
+
+def delete_remote_branch(branch_name: str):
+    """删除远程分支"""
+    typer.echo(f"Deleting remote branch 'origin/{branch_name}'...")
+    try:
+        run_git_command(["push", "origin", "--delete", branch_name])
+    except Exception as e:
+        typer.echo(f"[yellow]Warning: Could not delete remote branch (maybe already deleted?): {e}[/yellow]")
+
+def checkout_branch(branch_name: str):
+    """切换到指定分支"""
+    typer.echo(f"Switching to {branch_name}...")
+    try:
+        run_git_command(["checkout", branch_name])
+    except Exception as e:
+        typer.echo(f"[red]Failed to switch branch: {e}[/red]")
+
+def git_pull():
+    """拉取远程分支"""
+    branch_name = get_current_branch()
+    run_git_command(["pull", "origin", branch_name])
 
 def push_current_branch(branch_name: str):
     """推送当前分支到 origin"""

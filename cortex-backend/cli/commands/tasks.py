@@ -42,17 +42,18 @@ def list_tasks():
     table.add_column("Title", style="magenta")
     table.add_column("Priority", style="green")
     table.add_column("Status", style="yellow")
-
+    table.add_column("Branch", style="blue")
     # 填充数据
     for task in tasks:
         # 根据优先级设置颜色
         priority_color = "red" if task['priority'] == 'HIGH' else "white"
-
+        branch = task.get('branch_name') or ""
         table.add_row(
             str(task['id']),
             task['title'],
             f"[{priority_color}]{task['priority']}[/{priority_color}]",
-            task['status']
+            task['status'],
+            branch
         )
 
     console.print(table)

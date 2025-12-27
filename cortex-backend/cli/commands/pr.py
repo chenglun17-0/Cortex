@@ -3,6 +3,7 @@ import typer
 import webbrowser
 from rich.console import Console
 from cli.api import client
+from cli.config import get_config_value, DELETE_LOCAL_ON_DONE, DELETE_REMOTE_ON_DONE
 from cli.git import (
     ensure_git_repo,
     get_current_branch,
@@ -10,7 +11,11 @@ from cli.git import (
     get_remote_url,
     has_uncommitted_changes,
     stage_all_changes,
-    commit_changes
+    delete_remote_branch,
+    commit_changes,
+    get_main_branch,
+    checkout_branch,
+    git_pull, delete_local_branch
 )
 
 app = typer.Typer()
@@ -91,3 +96,56 @@ def create():
             webbrowser.open(pr_url)
     else:
         console.print("[yellow]Could not detect remote URL. Please open PR manually.[/yellow]")
+
+@app.command()
+def done():
+    """
+    完成任务 (远程已合并):
+    1. 切换回 Main 分支并拉取最新代码
+    2. 更新任务状态 -> DONE
+    3. 根据配置决定是否删除本地功能分支
+    """
+    api = client()
+    ensure_git_repo()
+
+    # 1. 识别当前任务分支
+    feature_branch = get_current_branch()
+    match = re.match(r"feature/task-(\d+)-", feature_branch)
+
+    if not match:
+        console.print(f"[red]Current branch '{feature_branch}' is not a valid Cortex task branch.[/red]")
+        raise typer.Exit(1)
+
+    task_id = int(match.group(1))
+    main_branch = get_main_branch()
+    console.print(f"[cyan]🚀 Wrapping up task #{task_id}...[/cyan]")
+
+    try:
+        # 切换回 main 分支
+        checkout_branch(main_branch)
+        git_pull()
+        # 更新任务状态为 DONE
+        patch_resp = api.patch(f"/tasks/{task_id}", json_data={"status": "DONE"})
+        if patch_resp.status_code == 200:
+            console.print(f"[green]✔ Task status updated to DONE[/green]")
+
+        # 读取配置
+        should_delete_local = get_config_value(DELETE_LOCAL_ON_DONE, default=False)
+        should_delete_remote = get_config_value(DELETE_REMOTE_ON_DONE, default=False)
+
+        if should_delete_local:
+            delete_local_branch(feature_branch)
+        else:
+            console.print(f"[blue]ℹ️  Config 'delete_local_on_done' is False. Local branch kept.[/blue]")
+
+        if should_delete_remote:
+            delete_remote_branch(feature_branch)
+        else:
+            console.print(f"[blue]ℹ️  Config 'delete_remote_on_done' is False. Remote branch kept.[/blue]")
+
+        console.print(f"\n[bold green]🎉 Task #{task_id} Completed![/bold green]")
+    except typer.Exit as e:
+        raise e
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
