@@ -1,113 +1,171 @@
-# AI Agent Instructions
+# AI 代理指南
 
-## Project: Cortex
+## 项目：Cortex
 
-Lightweight spec methodology for AI-powered development.
+用于 AI 驱动开发的轻量级规范方法。
 
-## Core Rules
+## 基础规则
+- **语言**：默认用中文回答；命令行输出可保持英文原样。
+- **目标优先**：所有实现以"验收标准"与"测试通过"为准；不做与目标无关的改动。以最小的改动实现目标。
+- **小步提交**：每一步都**先给出计划**与风险点，再最小改动、运行检查、展示 diff、再提交。
+- **先写/补测试**：发现缺陷请先生成 failing spec；修复后跑全量/关键用例。
+- **安全**：任何涉及数据库迁移、依赖升级、网络访问、Secrets，**必须先征求确认**并给出回滚方案。不要读取 `.env*`、`config/credentials*`、`secrets/**`。
+- **整洁原则** 每次因调试，测试，获取数据产生的临时性的脚本、文档、工具都必须生成在 tmp 文件夹下，并且在完成当前事项之前，必须将其删除，保证目录干净整洁没有多余的东西
+- 所有任务遵循 "Ask → Code"
+- 粒度：目标耗时 ≤ 1 小时；超出则先拆分
+- **目录规范** 根目录下不随意添加文件，文档优先生成在 docs 下，脚本优先生成在 scripts 下，如必须，则尽可能放在 tmp 目录下下
+- **一致性原则**：本项目长期维护，需要尽可能保持约定和规则的一致，包括但不限于各类技术栈、约定、行为描述、规则、依赖等。如出现与本文描述不一致的情况，先提示确认，确保降低不一致性的情况是已知的、可控的
 
-1. **Read README.md first** - Understand project context
-2. **Check specs/** - Review existing specs before starting
-3. **Use `lean-spec --help`** - When unsure about commands, check the built-in help
-4. **Follow LeanSpec principles** - Clarity over documentation
-5. **Keep it minimal** - If it doesn't add clarity, cut it
-6. **NEVER manually edit system-managed frontmatter** - Fields like `status`, `priority`, `tags`, `assignee`, `transitions`, `created_at`, `updated_at`, `completed_at`, `depends_on`, `related` are system-managed. Always use `lean-spec update`, `lean-spec link`, `lean-spec unlink`, or `lean-spec create` commands. Manual edits will cause metadata corruption and tracking issues.
-7. **Never use nested code blocks** - Markdown doesn't support code blocks within code blocks. If you need to show code examples in documentation, use indentation or describe the structure instead of nesting backticks.
 
-## When to Use Specs
 
-Write a spec for:
-- Features affecting multiple parts of the system
-- Breaking changes or significant refactors
-- Design decisions needing team alignment
+## 核心规则
 
-Skip specs for:
-- Bug fixes
-- Trivial changes
-- Self-explanatory refactors
+1. **首先阅读 README.md** - 了解项目背景
 
-## Essential Commands
+2. **检查 specs/** - 开始之前，请先查看现有规范
 
-**Quick Reference** (for full details, see `lean-spec --help`):
+3. **使用 `lean-spec --help`** - 如果对命令不确定，请查看内置帮助
 
-**Discovery:**
-- `lean-spec list` - See all specs
-- `lean-spec search "<query>"` - Find relevant specs
+4. **遵循 LeanSpec 原则** - 文档应以清晰易懂为先
 
-**Working with specs:**
-- `lean-spec create <name>` - Create new spec
-- `lean-spec update <spec> --status <status>` - Update status (REQUIRED - never edit frontmatter manually)
-- `lean-spec update <spec> --priority <priority>` - Update priority
-- `lean-spec deps <spec>` - Show dependency graph
-- `lean-spec tokens <spec>` - Count tokens for context management
+5. **保持简洁** - 如果内容不能提高清晰度，请删除
 
-**Project overview:**
-- `lean-spec board` - Kanban view with project health
-- `lean-spec stats` - Quick project metrics
+6. **切勿手动编辑系统管理的 frontmatter 字段** - `status`、`priority`、`tags`、`assignee`、`transitions`、`created_at`、`updated_at`、`completed_at`、`depends_on`、`related` 等字段均由系统管理。务必使用 `lean-spec update`、`lean-spec link`、`lean-spec unlink` 或 `lean-spec create` 命令。手动编辑会导致元数据损坏和跟踪问题。
 
-**When in doubt:** Run `lean-spec --help` or `lean-spec <command> --help` to discover commands.
+7. **切勿使用嵌套代码块** - Markdown 不支持代码块内嵌套代码块。如果需要在文档中展示代码示例，请使用缩进或描述代码结构，而不是使用嵌套的反引号。
 
-## Spec Relationships
+## 何时使用规范
 
-LeanSpec has two types of relationships:
+以下情况需要编写规范：
 
-### `related` - Bidirectional Soft Reference
-Informational relationship between specs. Automatically shown from both sides.
+- 影响系统多个部分的功能
 
-**Use when:** Specs cover related topics, work is coordinated but not blocking.
+- 重大变更或重大重构
 
-### `depends_on` - Directional Blocking Dependency
-Hard dependency - spec cannot start until dependencies complete.
+- 需要团队协作的设计决策
 
-**Use when:** Spec truly cannot start until another completes, work order matters.
+以下情况无需编写规范：
 
-**Best Practice:** Use `related` by default. Reserve `depends_on` for true blocking dependencies.
+- Bug 修复
 
-## SDD Workflow
+- 细微的变更
 
-1. **Discover** - Check existing specs with `lean-spec list`
-2. **Plan** - Create spec with `lean-spec create <name>` (status: `planned`)
-3. **Start Work** - Run `lean-spec update <spec> --status in-progress` before implementing
-4. **Implement** - Write code/docs, keep spec in sync as you learn
-5. **Complete** - Run `lean-spec update <spec> --status complete` after implementation done
-6. **Document** - Report progress and document changes into the spec
+- 不言自明的重构
 
-**CRITICAL - What "Work" Means:**
-- ❌ **NOT**: Creating/writing the spec document itself
-- ✅ **YES**: Implementing what the spec describes (code, docs, features, etc.)
+## 常用命令
 
-**Frontmatter Editing Rules:**
-- **NEVER manually edit**: `status`, `priority`, `tags`, `assignee`, `transitions`, timestamps, `depends_on`, `related`
-- **Use CLI commands**: `lean-spec update`, `lean-spec link`, `lean-spec unlink`
+**快速参考**（完整详情请参阅 `lean-spec --help`）：
 
-**Note on Archiving**: Archive specs when they're no longer actively referenced (weeks/months after completion), not immediately. Use `lean-spec archive <spec>` to move old/stale specs to `archived/` directory.
+**发现规范：**
 
-## Quality Standards
+- `lean-spec list` - 查看所有规范
 
-- Code is clear and maintainable
-- Tests cover critical paths
-- Specs stay in sync with implementation
-- **Status tracking is mandatory:**
-  - Specs start as `planned` after creation
-  - Mark `in-progress` BEFORE starting implementation work
-  - Mark `complete` AFTER implementation is finished
-  - **Remember**: Status tracks implementation, not spec document completion
-  - Never leave specs with stale status
+- `lean-spec search "<query>"` - 查找相关规范
 
-## Spec Complexity Guidelines
+**使用规范：**
 
-**Token Thresholds:**
-- **<2,000 tokens**: ✅ Optimal
-- **2,000-3,500 tokens**: ✅ Good
-- **3,500-5,000 tokens**: ⚠️ Warning - Consider splitting
-- **>5,000 tokens**: 🔴 Should split
+- `lean-spec create <name>` - 创建新规范
 
-**Check with:** `lean-spec tokens <spec>`
+- `lean-spec update <spec> --status <status>` - 更新状态（必需 - 切勿手动编辑 frontmatter）
 
-**When to split:** >3,500 tokens, multiple concerns, takes >10 min to read
+- `lean-spec update <spec> --priority <priority>` - 更新优先级
 
-**How to split:** Use sub-specs or split into related specs with `lean-spec link --related`
+- `lean-spec deps <spec>` - 显示依赖关系图
+
+- `lean-spec tokens <spec>` - 用于上下文管理的令牌计数
+
+**项目概览：**
+
+- `lean-spec board` - 看板视图，显示项目健康状况
+
+- `lean-spec stats` - 快速项目指标
+
+**如有疑问：** 运行 `lean-spec --help` 或 `lean-spec <command> --help` 以了解命令。
+
+## 规范关系
+
+LeanSpec 有两种类型的关系：
+
+### `related` - 双向软引用
+
+规范之间的信息关系。自动从双方显示。
+
+**适用场景：** 规范涵盖相关主题，工作协调但不阻塞。
+
+### `depends_on` - 定向阻塞依赖
+
+硬依赖 - 规范必须依赖项完成才能开始。
+
+**适用场景：** 规范必须在另一个规范完成后才能开始，工作顺序至关重要。
+
+**最佳实践：** 默认使用 `related`。将 `depends_on` 保留用于真正的阻塞依赖。
+
+## SDD 工作流程
+
+1. **发现** - 使用 `lean-spec list` 查看现有规范
+
+2. **计划** - 使用 `lean-spec create <名称>` 创建规范（状态：`已计划`）
+
+3. **开始工作** - 在实现之前运行 `lean-spec update <规范> --status in-progress`
+
+4. **实现** - 编写代码/文档，并在学习过程中保持规范的同步
+
+5. **完成** - 实现完成后运行 `lean-spec update <规范> --status complete`
+
+6. **记录** - 报告进度并将更改记录到规范中
+
+**关键 - “工作”的含义：**
+
+- ❌ **不**：创建/编写规范文档本身
+
+- ✅ **是**：实现规范描述的内容（代码、文档、功能等）
+
+**前置元数据编辑规则：**
+
+- **切勿手动编辑** `status`、`priority`、`tags`、`assignee`、`transitions`、timestamps、`depends_on`、`related`
+
+- **使用 CLI 命令**：`lean-spec update`、`lean-spec link`、`lean-spec unlink`
+
+**归档说明**：规范只有在不再被积极引用时（例如在完成数周/数月后）才应归档，而不是立即归档。使用 `lean-spec archive <spec>` 将旧的/过时的规范移动到 `archived/` 目录。
+
+## 质量标准
+
+- 代码清晰且易于维护
+
+- 测试覆盖关键路径
+
+- 规范与实现保持同步
+
+- **状态跟踪是强制性的：**
+
+- 规范创建后，初始状态为“已计划”
+
+- 在开始实现工作之前，标记为“进行中”
+
+- 在实现完成后，标记为“已完成”
+
+- **请记住**：状态跟踪的是实现进度，而不是规范文档的完成情况
+
+- 切勿让规范处于过时的状态
+
+## 规范复杂度指南
+
+**标记阈值：**
+
+- **<2,000 个标记**：✅ 最佳
+
+- **2,000-3,500 个标记**：✅ 良好
+
+- **3,500-5,000 个标记**：⚠️ 警告 - 考虑拆分
+
+- **>5,000 个标记**：🔴 应该拆分
+
+**使用以下命令检查：** `lean-spec tokens <spec>`
+
+**何时拆分：**超过 3500 个标记，涉及多个问题，阅读时间超过 10 分钟
+
+**如何拆分：** 使用子规范或使用 `lean-spec link --related` 将其拆分为相关规范
 
 ---
 
-**Remember**: LeanSpec is a mindset, not a rulebook. When in doubt, keep it simple and use `lean-spec --help` to discover features as needed.
+**记住：** LeanSpec 是一种思维方式，而非规则手册。如有疑问，请保持简洁，并使用 `lean-spec --help` 来查找所需功能。
