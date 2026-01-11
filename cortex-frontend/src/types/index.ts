@@ -1,3 +1,23 @@
+export interface User {
+    id: number;
+    email: string;
+    username: string;
+    is_active: boolean;
+}
+
+export interface User {
+    id: number;
+    email: string;
+    username: string;
+    is_active: boolean;
+}
+
+export interface UserUpdateProfile {
+    username?: string;
+    old_password?: string;
+    password?: string;
+}
+
 export interface Project {
     id: number;
     name: string;

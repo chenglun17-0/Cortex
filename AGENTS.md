@@ -1,3 +1,22 @@
+<!-- OPENSPEC:START -->
+# OpenSpec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/openspec/AGENTS.md` when the request:
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/openspec/AGENTS.md` to learn:
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+
+Keep this managed block so 'openspec update' can refresh the instructions.
+
+<!-- OPENSPEC:END -->
+
 # AI 代理指南
 
 ## 项目：Cortex
@@ -15,157 +34,3 @@
 - 粒度：目标耗时 ≤ 1 小时；超出则先拆分
 - **目录规范** 根目录下不随意添加文件，文档优先生成在 docs 下，脚本优先生成在 scripts 下，如必须，则尽可能放在 tmp 目录下下
 - **一致性原则**：本项目长期维护，需要尽可能保持约定和规则的一致，包括但不限于各类技术栈、约定、行为描述、规则、依赖等。如出现与本文描述不一致的情况，先提示确认，确保降低不一致性的情况是已知的、可控的
-
-
-
-## 核心规则
-
-1. **首先阅读 README.md** - 了解项目背景
-
-2. **检查 specs/** - 开始之前，请先查看现有规范
-
-3. **使用 `lean-spec --help`** - 如果对命令不确定，请查看内置帮助
-
-4. **遵循 LeanSpec 原则** - 文档应以清晰易懂为先
-
-5. **保持简洁** - 如果内容不能提高清晰度，请删除
-
-6. **切勿手动编辑系统管理的 frontmatter 字段** - `status`、`priority`、`tags`、`assignee`、`transitions`、`created_at`、`updated_at`、`completed_at`、`depends_on`、`related` 等字段均由系统管理。务必使用 `lean-spec update`、`lean-spec link`、`lean-spec unlink` 或 `lean-spec create` 命令。手动编辑会导致元数据损坏和跟踪问题。
-
-7. **切勿使用嵌套代码块** - Markdown 不支持代码块内嵌套代码块。如果需要在文档中展示代码示例，请使用缩进或描述代码结构，而不是使用嵌套的反引号。
-
-## 何时使用规范
-
-以下情况需要编写规范：
-
-- 影响系统多个部分的功能
-
-- 重大变更或重大重构
-
-- 需要团队协作的设计决策
-
-以下情况无需编写规范：
-
-- Bug 修复
-
-- 细微的变更
-
-- 不言自明的重构
-
-## 常用命令
-
-**快速参考**（完整详情请参阅 `lean-spec --help`）：
-
-**发现规范：**
-
-- `lean-spec list` - 查看所有规范
-
-- `lean-spec search "<query>"` - 查找相关规范
-
-**使用规范：**
-
-- `lean-spec create <name>` - 创建新规范
-
-- `lean-spec update <spec> --status <status>` - 更新状态（必需 - 切勿手动编辑 frontmatter）
-
-- `lean-spec update <spec> --priority <priority>` - 更新优先级
-
-- `lean-spec deps <spec>` - 显示依赖关系图
-
-- `lean-spec tokens <spec>` - 用于上下文管理的令牌计数
-
-**项目概览：**
-
-- `lean-spec board` - 看板视图，显示项目健康状况
-
-- `lean-spec stats` - 快速项目指标
-
-**如有疑问：** 运行 `lean-spec --help` 或 `lean-spec <command> --help` 以了解命令。
-
-## 规范关系
-
-LeanSpec 有两种类型的关系：
-
-### `related` - 双向软引用
-
-规范之间的信息关系。自动从双方显示。
-
-**适用场景：** 规范涵盖相关主题，工作协调但不阻塞。
-
-### `depends_on` - 定向阻塞依赖
-
-硬依赖 - 规范必须依赖项完成才能开始。
-
-**适用场景：** 规范必须在另一个规范完成后才能开始，工作顺序至关重要。
-
-**最佳实践：** 默认使用 `related`。将 `depends_on` 保留用于真正的阻塞依赖。
-
-## SDD 工作流程
-
-1. **发现** - 使用 `lean-spec list` 查看现有规范
-
-2. **计划** - 使用 `lean-spec create <名称>` 创建规范（状态：`已计划`）
-
-3. **开始工作** - 在实现之前运行 `lean-spec update <规范> --status in-progress`
-
-4. **实现** - 编写代码/文档，并在学习过程中保持规范的同步
-
-5. **完成** - 实现完成后运行 `lean-spec update <规范> --status complete`
-
-6. **记录** - 报告进度并将更改记录到规范中
-
-**关键 - “工作”的含义：**
-
-- ❌ **不**：创建/编写规范文档本身
-
-- ✅ **是**：实现规范描述的内容（代码、文档、功能等）
-
-**前置元数据编辑规则：**
-
-- **切勿手动编辑** `status`、`priority`、`tags`、`assignee`、`transitions`、timestamps、`depends_on`、`related`
-
-- **使用 CLI 命令**：`lean-spec update`、`lean-spec link`、`lean-spec unlink`
-
-**归档说明**：规范只有在不再被积极引用时（例如在完成数周/数月后）才应归档，而不是立即归档。使用 `lean-spec archive <spec>` 将旧的/过时的规范移动到 `archived/` 目录。
-
-## 质量标准
-
-- 代码清晰且易于维护
-
-- 测试覆盖关键路径
-
-- 规范与实现保持同步
-
-- **状态跟踪是强制性的：**
-
-- 规范创建后，初始状态为“已计划”
-
-- 在开始实现工作之前，标记为“进行中”
-
-- 在实现完成后，标记为“已完成”
-
-- **请记住**：状态跟踪的是实现进度，而不是规范文档的完成情况
-
-- 切勿让规范处于过时的状态
-
-## 规范复杂度指南
-
-**标记阈值：**
-
-- **<2,000 个标记**：✅ 最佳
-
-- **2,000-3,500 个标记**：✅ 良好
-
-- **3,500-5,000 个标记**：⚠️ 警告 - 考虑拆分
-
-- **>5,000 个标记**：🔴 应该拆分
-
-**使用以下命令检查：** `lean-spec tokens <spec>`
-
-**何时拆分：**超过 3500 个标记，涉及多个问题，阅读时间超过 10 分钟
-
-**如何拆分：** 使用子规范或使用 `lean-spec link --related` 将其拆分为相关规范
-
----
-
-**记住：** LeanSpec 是一种思维方式，而非规则手册。如有疑问，请保持简洁，并使用 `lean-spec --help` 来查找所需功能。

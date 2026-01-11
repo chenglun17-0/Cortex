@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
-import { Layout, Typography, Button, Card, List, Modal, Form, Input, message, Empty } from 'antd';
-import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons';
+import { Typography, Button, Card, List, Modal, Form, Input, message, Empty, Space, Tag } from 'antd';
+import { PlusOutlined, FolderOpenOutlined, RightOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProjects, createProject } from './service';
 import type { ProjectCreate } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
-const { Content } = Layout;
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 export const ProjectsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  // 1. 获取项目列表数据
+
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
   });
 
-  // 2. 创建项目的 Mutation (变更操作)
   const createMutation = useMutation({
     mutationFn: createProject,
     onSuccess: () => {
       message.success('项目创建成功！');
       setIsModalOpen(false);
       form.resetFields();
-      // 自动刷新列表，无需手动重新请求
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: () => {
@@ -40,66 +37,108 @@ export const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Content style={{ padding: '40px' }}>
-        {/* 顶部标题栏 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* 顶部标题栏 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+        <div>
           <Title level={2} style={{ margin: 0 }}>我的项目</Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={() => setIsModalOpen(true)}
-          >
-            创建新项目
-          </Button>
+          <Text type="secondary">管理和跟踪您的所有项目进度</Text>
         </div>
-
-        {/* 项目列表展示 */}
-        <List
-          grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4, xl: 4, xxl: 6 }}
-          dataSource={projects}
-          loading={isLoading}
-          locale={{ emptyText: <Empty description="暂无项目，快去创建一个吧" /> }}
-          renderItem={(item) => (
-            <List.Item>
-              <Card
-                hoverable
-                style={{ cursor: 'pointer' }} // 1. 让鼠标悬停时变成"手型"
-                onClick={() => navigate(`/projects/${item.id}`)} // 2. 点击整个卡片触发跳转
-                title={item.name}
-                extra={<FolderOpenOutlined style={{ color: '#1890ff' }} />}
-              >
-                <Paragraph ellipsis={{ rows: 2 }}>
-                  {item.description || '暂无描述'}
-                </Paragraph>
-              </Card>
-            </List.Item>
-          )}
-        />
-
-        {/* 创建项目弹窗 */}
-        <Modal
-          title="创建新项目"
-          open={isModalOpen}
-          onOk={() => form.submit()}
-          onCancel={() => setIsModalOpen(false)}
-          confirmLoading={createMutation.isPending}
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="large"
+          onClick={() => setIsModalOpen(true)}
+          style={{ borderRadius: 8, height: 40 }}
         >
-          <Form form={form} layout="vertical" onFinish={handleCreate}>
-            <Form.Item
-              name="name"
-              label="项目名称"
-              rules={[{ required: true, message: '请输入项目名称' }]}
+          创建新项目
+        </Button>
+      </div>
+
+      {/* 项目列表展示 */}
+      <List
+        grid={{ gutter: 24, xs: 1, sm: 2, md: 3, lg: 3, xl: 4, xxl: 4 }}
+        dataSource={projects}
+        loading={isLoading}
+        locale={{ emptyText: <Empty description="暂无项目，快去创建一个吧" style={{ marginTop: 64 }} /> }}
+        renderItem={(item) => (
+          <List.Item>
+            <Card
+              hoverable
+              style={{ 
+                borderRadius: 12, 
+                border: '1px solid #e2e8f0',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              styles={{ body: { padding: 24, flex: 1, display: 'flex', flexDirection: 'column' } }}
+              onClick={() => navigate(`/projects/${item.id}`)}
             >
-              <Input placeholder="例如：Cortex 研发系统" />
-            </Form.Item>
-            <Form.Item name="description" label="描述">
-              <Input.TextArea rows={3} placeholder="简要描述项目的目标..." />
-            </Form.Item>
-          </Form>
-        </Modal>
-      </Content>
-    </Layout>
+              <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ 
+                  width: 40, 
+                  height: 40, 
+                  background: '#eff6ff', 
+                  borderRadius: 10, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}>
+                  <FolderOpenOutlined style={{ fontSize: 20, color: '#3b82f6' }} />
+                </div>
+                <Tag color="blue" bordered={false}>Active</Tag>
+              </div>
+              
+              <Title level={4} style={{ margin: '0 0 8px 0', fontSize: 18 }}>{item.name}</Title>
+              <Paragraph 
+                type="secondary" 
+                ellipsis={{ rows: 2 }} 
+                style={{ marginBottom: 24, flex: 1 }}
+              >
+                {item.description || '暂无项目描述，点击查看详情...'}
+              </Paragraph>
+
+              <div style={{ 
+                borderTop: '1px solid #f1f5f9', 
+                paddingTop: 16, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <Space size={4} style={{ color: '#6366f1', fontWeight: 500, fontSize: 13 }}>
+                  进入看板 <RightOutlined style={{ fontSize: 10 }} />
+                </Space>
+              </div>
+            </Card>
+          </List.Item>
+        )}
+      />
+
+      {/* 创建项目弹窗 */}
+      <Modal
+        title="创建新项目"
+        open={isModalOpen}
+        onOk={() => form.submit()}
+        onCancel={() => setIsModalOpen(false)}
+        confirmLoading={createMutation.isPending}
+        okButtonProps={{ style: { borderRadius: 6 } }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreate}>
+          <Form.Item
+            name="name"
+            label="项目名称"
+            rules={[{ required: true, message: '请输入项目名称' }]}
+          >
+            <Input placeholder="例如：Cortex 研发系统" style={{ borderRadius: 6 }} />
+          </Form.Item>
+          <Form.Item name="description" label="项目描述">
+            <Input.TextArea rows={3} placeholder="简要描述项目的目标..." style={{ borderRadius: 6 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 };

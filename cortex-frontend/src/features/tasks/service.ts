@@ -3,11 +3,16 @@ import { http } from '../../lib/http';
 import type { Task, TaskUpdate, TaskCreate } from '../../types';
 
 // 获取指定项目的任务列表
-// 假设后端接口支持过滤：GET /api/v1/tasks/?project_id=1
+// 后端接口：GET /api/v1/tasks/{project_id}
 export const getTasksByProject = async (projectId: string): Promise<Task[]> => {
-  const response = await http.get<Task[]>('/tasks/', {
-    params: { project_id: projectId },
-  });
+  const response = await http.get<Task[]>(`/tasks/${projectId}`);
+  return response.data;
+};
+
+// 获取当前用户的任务列表
+// 后端接口：GET /api/v1/tasks/
+export const getMyTasks = async (): Promise<Task[]> => {
+  const response = await http.get<Task[]>('/tasks/');
   return response.data;
 };
 

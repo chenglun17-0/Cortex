@@ -29,6 +29,12 @@ class UserUpdate(BaseModel):
     organization_id: Optional[int] = None
 
 
+class UserUpdateProfile(BaseModel):
+    username: Optional[str] = Field(None, max_length=50)
+    old_password: Optional[str] = Field(None, description="修改密码时必须提供旧密码")
+    password: Optional[str] = Field(None, min_length=6, description="新密码")
+
+
 # 4. 响应 Schema (Response/Public)
 # 用于 API 返回用户信息
 # ！！！严禁包含 password 或 hashed_password ！！！

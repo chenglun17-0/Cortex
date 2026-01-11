@@ -1,24 +1,36 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Layout, Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, } from 'antd';
-import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
+import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip } from 'antd';
+import { PlusOutlined, MoreOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
 import { type Task, TaskStatus } from '../../types';
 
 
-const { Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 // 定义看板的列结构
 const COLUMNS = [
-    { id: TaskStatus.TODO, title: '待处理', color: '#f50' },
-    { id: TaskStatus.IN_PROGRESS, title: '进行中', color: '#2db7f5' },
-    { id: TaskStatus.REVIEW, title: '待审核', color: '#87d068' },
-    { id: TaskStatus.DONE, title: '已完成', color: '#108ee9' },
+    { id: TaskStatus.TODO, title: '待处理', color: '#64748b' },
+    { id: TaskStatus.IN_PROGRESS, title: '进行中', color: '#3b82f6' },
+    { id: TaskStatus.REVIEW, title: '待审核', color: '#f59e0b' },
+    { id: TaskStatus.DONE, title: '已完成', color: '#10b981' },
 ];
+
+const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
+  const colors: Record<string, string> = {
+    High: 'red',
+    Medium: 'orange',
+    Low: 'blue',
+  };
+  return (
+    <Tag color={colors[priority] || 'default'} bordered={false} style={{ fontSize: '10px', lineHeight: '16px' }}>
+      {priority}
+    </Tag>
+  );
+};
 
 export const KanbanBoard: React.FC = () => {
     const { projectId } = useParams<{ projectId: string }>();
@@ -26,24 +38,21 @@ export const KanbanBoard: React.FC = () => {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
-    // 获取任务数据
+
     const { data: tasks = [], isLoading } = useQuery({
         queryKey: ['tasks', projectId],
         queryFn: () => getTasksByProject(projectId!),
-        enabled: !!projectId, // 只有 projectId 存在时才请求
+        enabled: !!projectId,
     });
 
-    // 乐观更新 (Mutation)：拖拽后立即更新 UI，随后异步请求后端
     const updateTaskMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: TaskStatus }) =>
             updateTask(id, { status }),
         onSuccess: () => {
-            // 成功后让缓存失效，触发重新拉取确保数据一致
             queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
         },
     });
 
-    // 创建任务 Mutation
     const createTaskMutation = useMutation({
         mutationFn: createTask,
         onSuccess: () => {
@@ -57,17 +66,15 @@ export const KanbanBoard: React.FC = () => {
         }
     });
 
-    // 处理表单提交
     const handleCreate = (values: any) => {
         if (!projectId) return;
         createTaskMutation.mutate({
             ...values,
-            project_id: Number(projectId), // 确保转为数字
-            status: TaskStatus.TODO,       // 默认状态
+            project_id: Number(projectId),
+            status: TaskStatus.TODO,
         });
     };
 
-    // 将扁平的任务列表按状态分组
     const tasksByStatus = useMemo(() => {
         const grouped: Record<string, Task[]> = {
             [TaskStatus.TODO]: [],
@@ -83,140 +90,164 @@ export const KanbanBoard: React.FC = () => {
         return grouped;
     }, [tasks]);
 
-    // 处理拖拽结束事件
     const onDragEnd = (result: DropResult) => {
         const { source, destination, draggableId } = result;
-
-        // 如果没有放置目标，或者位置没变，直接返回
         if (!destination) return;
-        if (
-            source.droppableId === destination.droppableId &&
-            source.index === destination.index
-        ) {
-            return;
-        }
+        if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-        // 触发更新
-        // 注意：这里 draggableId 通常是 string，需要转为 number
         updateTaskMutation.mutate({
             id: Number(draggableId),
             status: destination.droppableId as TaskStatus,
         });
-
-        // 💡 进阶提示：为了体验更好，这里可以使用 queryClient.setQueryData 做乐观 UI 更新
-        // 但为了代码简单，暂时先依赖 React Query 的自动刷新
     };
 
-    if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />;
+    if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
 
     return (
-        <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-            <Content style={{ padding: '24px', overflowX: 'auto' }}>
-                {/* 顶部导航栏*/}
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')} style={{ paddingLeft: 0 }}>
-                            返回项目列表
-                        </Button>
-                        <Title level={3} style={{ marginTop: 0, marginBottom: 0 }}>项目看板 (ID: {projectId})</Title>
-                    </div>
-
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setIsModalOpen(true)}
-                    >
-                        新建任务
-                    </Button>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* 顶部导航与操作 */}
+            <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <Breadcrumb 
+                    items={[
+                      { title: <a onClick={() => navigate('/')}>项目列表</a> },
+                      { title: `项目看板` },
+                    ]} 
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Title level={3} style={{ margin: 0 }}>迭代看板</Title>
                 </div>
 
-
-                {/* 拖拽上下文 */}
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', minWidth: '1000px' }}>
-                        {COLUMNS.map((col) => (
-                            <Droppable key={col.id} droppableId={col.id}>
-                                {(provided, snapshot) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.droppableProps}
-                                        style={{
-                                            background: '#ebecf0',
-                                            padding: '16px',
-                                            borderRadius: '8px',
-                                            width: '300px',
-                                            minHeight: '500px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                        }}
-                                    >
-                                        {/* 列标题 */}
-                                        <div style={{ marginBottom: 16, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
-                                            <span>{col.title}</span>
-                                            <Tag color={col.color}>{tasksByStatus[col.id]?.length || 0}</Tag>
-                                        </div>
-
-                                        {/* 任务卡片列表 */}
-                                        {tasksByStatus[col.id]?.map((task, index) => (
-                                            <Draggable key={task.id} draggableId={String(task.id)} index={index}>
-                                                {(provided, snapshot) => (
-                                                    <Card
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
-                                                        size="small"
-                                                        style={{
-                                                            marginBottom: '8px',
-                                                            boxShadow: snapshot.isDragging ? '0 5px 10px rgba(0,0,0,0.2)' : 'none',
-                                                            ...provided.draggableProps.style, // 必须保留这个 style
-                                                        }}
-                                                    >
-                                                        <div style={{ fontWeight: 500 }}>{task.title}</div>
-                                                        <div style={{ color: '#888', fontSize: '12px', marginTop: 4 }}>
-                                                            ID: #{task.id}
-                                                        </div>
-                                                    </Card>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                        {provided.placeholder}
-                                    </div>
-                                )}
-                            </Droppable>
-                        ))}
-                    </div>
-                </DragDropContext>
-                {/* 新建任务弹窗 */}
-                <Modal
-                    title="新建任务"
-                    open={isModalOpen}
-                    onOk={() => form.submit()}
-                    onCancel={() => setIsModalOpen(false)}
-                    confirmLoading={createTaskMutation.isPending}
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsModalOpen(true)}
+                    size="large"
+                    style={{ borderRadius: 8 }}
                 >
-                    <Form form={form} layout="vertical" onFinish={handleCreate}>
-                        <Form.Item
-                            name="title"
-                            label="任务标题"
-                            rules={[{ required: true, message: '请输入任务标题' }]}
-                        >
-                            <Input placeholder="例如：实现登录接口" />
-                        </Form.Item>
+                    新建任务
+                </Button>
+            </div>
 
-                        <Form.Item name="priority" label="优先级" initialValue="Medium">
-                            <Select>
-                                <Option value="High">高 (High)</Option>
-                                <Option value="Medium">中 (Medium)</Option>
-                                <Option value="Low">低 (Low)</Option>
-                            </Select>
-                        </Form.Item>
 
-                        <Form.Item name="description" label="详细描述">
-                            <Input.TextArea rows={4} placeholder="支持 Markdown 格式..." />
-                        </Form.Item>
-                    </Form>
-                </Modal>
-            </Content>
-        </Layout>
+            {/* 拖拽上下文 */}
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 16, flex: 1 }}>
+                    {COLUMNS.map((col) => (
+                        <Droppable key={col.id} droppableId={col.id}>
+                            {(provided, snapshot) => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    style={{
+                                        background: '#f8fafc',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        width: '320px',
+                                        minHeight: '600px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        border: '1px solid #e2e8f0',
+                                        boxShadow: snapshot.isDraggingOver ? '0 0 0 2px #6366f1' : 'none',
+                                        transition: 'background-color 0.2s ease',
+                                    }}
+                                >
+                                    {/* 列标题 */}
+                                    <div style={{ padding: '4px 8px 16px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Space size={8}>
+                                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color }} />
+                                          <span style={{ color: '#475569', fontSize: 15 }}>{col.title}</span>
+                                          <Tag bordered={false} style={{ margin: 0, borderRadius: 10, background: '#e2e8f0', color: '#64748b', fontSize: 11 }}>
+                                            {tasksByStatus[col.id]?.length || 0}
+                                          </Tag>
+                                        </Space>
+                                        <Button type="text" size="small" icon={<MoreOutlined />} />
+                                    </div>
+
+                                    {/* 任务卡片列表 */}
+                                    <div style={{ flex: 1 }}>
+                                      {tasksByStatus[col.id]?.map((task, index) => (
+                                          <Draggable key={task.id} draggableId={String(task.id)} index={index}>
+                                              {(provided, snapshot) => (
+                                                  <Card
+                                                      ref={provided.innerRef}
+                                                      {...provided.draggableProps}
+                                                      {...provided.dragHandleProps}
+                                                      size="small"
+                                                      bordered={false}
+                                                      style={{
+                                                          marginBottom: '12px',
+                                                          borderRadius: '8px',
+                                                          boxShadow: snapshot.isDragging 
+                                                            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' 
+                                                            : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                                                          border: '1px solid #e2e8f0',
+                                                          background: '#fff',
+                                                          ...provided.draggableProps.style,
+                                                      }}
+                                                      styles={{ body: { padding: '12px' } }}
+                                                  >
+                                                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                                        <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>#{task.id}</Text>
+                                                        <PriorityTag priority={task.priority || "Medium"} />
+                                                      </div>
+                                                      <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: 12, lineHeight: 1.5 }}>
+                                                        {task.title}
+                                                      </div>
+                                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Tooltip title="截止日期未设置">
+                                                          <Space size={4} style={{ fontSize: 12, color: '#94a3b8' }}>
+                                                            <ClockCircleOutlined style={{ fontSize: 10 }} />
+                                                            <span>-</span>
+                                                          </Space>
+                                                        </Tooltip>
+                                                        <Avatar size={20} style={{ backgroundColor: '#6366f1', fontSize: 10 }}>U</Avatar>
+                                                      </div>
+                                                  </Card>
+                                              )}
+                                          </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </div>
+                                </div>
+                            )}
+                        </Droppable>
+                    ))}
+                </div>
+            </DragDropContext>
+
+            {/* 新建任务弹窗 */}
+            <Modal
+                title="新建任务"
+                open={isModalOpen}
+                onOk={() => form.submit()}
+                onCancel={() => setIsModalOpen(false)}
+                confirmLoading={createTaskMutation.isPending}
+                okButtonProps={{ style: { borderRadius: 6 } }}
+                cancelButtonProps={{ style: { borderRadius: 6 } }}
+            >
+                <Form form={form} layout="vertical" onFinish={handleCreate}>
+                    <Form.Item
+                        name="title"
+                        label="任务标题"
+                        rules={[{ required: true, message: '请输入任务标题' }]}
+                    >
+                        <Input placeholder="例如：实现登录接口" style={{ borderRadius: 6 }} />
+                    </Form.Item>
+
+                    <Form.Item name="priority" label="优先级" initialValue="Medium">
+                        <Select style={{ borderRadius: 6 }}>
+                            <Option value="High">高 (High)</Option>
+                            <Option value="Medium">中 (Medium)</Option>
+                            <Option value="Low">低 (Low)</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item name="description" label="详细描述">
+                        <Input.TextArea rows={4} placeholder="输入项目描述..." style={{ borderRadius: 6 }} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
     );
 };
