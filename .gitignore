@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 *.pyc
 cortex-backend/cortex_cli.egg-info
+.pids
+logs/
+.factory/
+.opencode/
+.gemini/
