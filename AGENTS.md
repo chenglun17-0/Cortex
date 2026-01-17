@@ -65,10 +65,12 @@ cd cortex-backend
 # 方式2: 手动启动
 cd cortex-backend
 source .venv/bin/activate
-arch -arm64 python -m cortex_mcp.server
+python -m cortex_mcp.server
 ```
 
-**说明**：MCP 服务器主要用于集成到 Claude Desktop 等 AI 工具，详见 [docs/mcp-integration.md](./docs/mcp-integration.md)
+**说明**：MCP 服务器主要用于集成到 Claude Desktop 等 AI 工具。
+
+**架构兼容性**: 如果遇到架构不兼容问题，启动脚本会自动检测并尝试修复。详见 [docs/mcp-architecture-fix.md](./docs/mcp-architecture-fix.md) 和 [docs/mcp-integration.md](./docs/mcp-integration.md)
 
 ## Git 提交规范
 
