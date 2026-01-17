@@ -162,7 +162,7 @@ ctx 是 Cortex 项目的任务管理 CLI 工具。
 开发新功能时，**必须**遵循以下流程：
 
 ```bash
-# 1. 创建任务（在 PingCode Ship 中创建，或使用 CLI）
+# 1. 创建任务（使用 CLI）
 # 2. 开始任务（自动生成分支、绑定任务、切换分支）
 ctx tasks start <任务ID>
 
