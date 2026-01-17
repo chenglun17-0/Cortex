@@ -58,13 +58,14 @@ tail -f logs/frontend.log
 
 ### 启动 MCP 服务器
 ```bash
-# 使用 cortex-mcp 命令（需要先安装后端依赖）
+# 方式1: 使用启动脚本（推荐，自动处理架构问题）
+cd cortex-backend
+./start-mcp.sh
+
+# 方式2: 手动启动
 cd cortex-backend
 source .venv/bin/activate
-cortex-mcp
-
-# 或使用 Python 模块方式
-python -m cortex_mcp.server
+arch -arm64 python -m cortex_mcp.server
 ```
 
 **说明**：MCP 服务器主要用于集成到 Claude Desktop 等 AI 工具，详见 [docs/mcp-integration.md](./docs/mcp-integration.md)
