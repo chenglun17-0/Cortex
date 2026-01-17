@@ -56,6 +56,19 @@ tail -f logs/backend.log
 tail -f logs/frontend.log
 ```
 
+### 启动 MCP 服务器
+```bash
+# 使用 cortex-mcp 命令（需要先安装后端依赖）
+cd cortex-backend
+source .venv/bin/activate
+cortex-mcp
+
+# 或使用 Python 模块方式
+python -m cortex_mcp.server
+```
+
+**说明**：MCP 服务器主要用于集成到 Claude Desktop 等 AI 工具，详见 [docs/mcp-integration.md](./docs/mcp-integration.md)
+
 ## Git 提交规范
 
 ### 查看当前状态
