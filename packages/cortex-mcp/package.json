@@ -1,0 +1,48 @@
+{
+  "name": "@cortex/cli-mcp",
+  "version": "1.0.0",
+  "description": "Cortex CLI MCP Server - Connect Claude Desktop, Cline, Cursor to Cortex task management",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "cortex-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cortex",
+    "claude",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "zod": "^4.0.0",
+    "execa": "^9.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/cortex"
+  }
+}

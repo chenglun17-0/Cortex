@@ -9,54 +9,85 @@
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-### 2. 添加配置（方式1：简洁推荐）
+### 2. 添加配置（npm 包方式）
 
 ```json
 {
   "mcpServers": {
     "cortex": {
-      "command": "python",
+      "command": "npx",
       "args": [
-        "-m",
-        "cortex_mcp.server"
-      ],
-      "env": {
-        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
-      }
+        "@cortex/cli-mcp@latest"
+      ]
     }
   }
 }
 ```
 
-### 3. 添加配置（方式2：处理架构问题）
+### 3. 替换路径
+无需路径配置，npm 包会自动处理。
 
-如果遇到架构不兼容问题，使用启动脚本：
-
-```json
-{
-  "mcpServers": {
-    "cortex": {
-      "command": "/Users/jal/school/Cortex/cortex-backend/start-mcp.sh",
-      "args": []
-    }
-  }
-}
-```
-
-### 4. 替换路径
-将 `/Users/jal/school/Cortex/cortex-backend` 替换为你的实际路径
-
-### 5. 重启 Claude Desktop
-重启应用以加载新的 MCP 服务器
+### 4. 重启 Claude Desktop
+重启应用以加载新的 MCP 服务器。
 
 ### 配置说明
 
-| 配置方式 | 适用场景 | 优点 | 缺点 |
-|---------|---------|------|------|
-| Python 模块 | 大多数情况 | 简洁，类似 npm 包 | 可能遇到架构问题 |
-| 启动脚本 | 架构不兼容时 | 自动检测和修复 | 需要绝对路径 |
+| 配置方式 | 适用场景 | 优点 |
+|---------|---------|------|
+| npm 包 | 所有情况 | 简洁，无需 Python 环境 | 自动依赖管理 |
 
 ## 其他 AI 工具配置
+
+### Cline (VS Code)
+
+在 VS Code 设置中添加：
+
+```json
+{
+  "cline.mcpServers": {
+    "cortex": {
+      "command": "npx",
+      "args": [
+        "@cortex/cli-mcp@latest"
+      ]
+    }
+  }
+}
+```
+
+### Cursor
+
+在 Cursor 设置中添加：
+
+```json
+{
+  "mcp.servers": {
+    "cortex": {
+      "command": "npx",
+      "args": [
+        "@cortex/cli-mcp@latest"
+      ]
+    }
+  }
+}
+```
+
+### Continue.dev
+
+编辑 `~/.continue/config.json`：
+
+```json
+{
+  "mcpServers": {
+    "cortex": {
+      "command": "npx",
+      "args": [
+        "@cortex/cli-mcp@latest"
+      ]
+    }
+  }
+}
+```
 
 ## 什么是 MCP？
 
@@ -69,304 +100,24 @@ Cortex MCP 服务器提供以下工具：
 | 工具名称 | 描述 | 参数 |
 |---------|------|------|
 | `list_tasks` | 列出分配给当前用户的任务 | 无 |
-| `start_task` | 开始任务（创建分支、更新状态） | `task_id` (integer) |
+| `start_task` | 开始任务（创建分支、更新状态） | `task_id` (number) |
 | `submit_pr` | 提交代码并创建 PR | `commit_message` (string, 可选) |
 | `complete_task` | 完成任务（清理分支） | 无 |
 | `get_task_status` | 获取当前任务状态 | 无 |
 
-## 安装
+## 先决条件
 
-### 1. 安装依赖
+- Node.js >= 18.0.0
+- Cortex CLI (`ctx`) 已安装并配置
+- 活动的 Cortex 会话（运行 `ctx auth login`）
 
-```bash
-cd cortex-backend
-pip install -e .
-```
+## 从 Python MCP 迁移
 
-这将安装 `mcp` 包并注册 `cortex-mcp` 命令。
+如果您之前使用基于 Python 的 MCP 服务器：
 
-### 2. 验证安装
-
-```bash
-cortex-mcp --help
-```
-
-## Claude Desktop 配置
-
-### macOS 配置文件位置
-
-`~/Library/Application Support/Claude/claude_desktop_config.json`
-
-### 配置示例
-
-```json
-{
-  "mcpServers": {
-    "cortex": {
-      "command": "python",
-      "args": [
-        "-m",
-        "cortex_mcp.server"
-      ],
-      "env": {
-        "PYTHONPATH": "/path/to/cortex-backend"
-      }
-    }
-  }
-}
-```
-
-**注意事项**：
-- 将 `/path/to/cortex-backend` 替换为你的 cortex-backend 目录的绝对路径
-- 确保已经通过 `ctx auth login` 登录 Cortex 系统
-
-### 配置对比
-
-| AI 工具 | 配置文件位置 | 配置键 |
-|---------|------------|--------|
-| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | `mcpServers` |
-| Cline (VS Code) | VS Code Settings | `cline.mcpServers` |
-| Cursor | Cursor Settings | `mcp.servers` |
-| Continue.dev | `~/.continue/config.json` | `mcpServers` |
-| 自定义 Agent | 代码中配置 | 使用 MCP SDK |
-
-## 使用绝对路径的替代方案
-
-```json
-{
-  "mcpServers": {
-    "cortex": {
-      "command": "/path/to/.venv/bin/python",
-      "args": [
-        "/path/to/cortex-backend/cortex_mcp/server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/path/to/cortex-backend"
-      }
-    }
-  }
-}
-```
-
-## Cline (VS Code Extension) 配置
-
-Cline 是 VS Code 的 AI 助手扩展，支持 MCP。
-
-### 1. 安装 Cline
-在 VS Code 中搜索并安装 "Cline" 扩展
-
-### 2. 配置 MCP（简洁方式）
-
-```json
-{
-  "cline.mcpServers": {
-    "cortex": {
-      "command": "python",
-      "args": ["-m", "cortex_mcp.server"],
-      "env": {
-        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
-      }
-    }
-  }
-}
-```
-
-### 3. 配置 MCP（脚本方式）
-
-```json
-{
-  "cline.mcpServers": {
-    "cortex": {
-      "command": "/Users/jal/school/Cortex/cortex-backend/start-mcp.sh"
-    }
-  }
-}
-```
-
-### 4. 重启 VS Code
-使配置生效
-
-## Cursor 配置
-
-Cursor 是基于 AI 的代码编辑器，内置 MCP 支持。
-
-### 1. 打开设置
-`Cmd+,` → 搜索 "MCP"
-
-### 2. 添加 MCP 服务器（简洁方式）
-
-```json
-{
-  "mcp.servers": {
-    "cortex": {
-      "command": "python",
-      "args": ["-m", "cortex_mcp.server"],
-      "env": {
-        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
-      }
-    }
-  }
-}
-```
-
-### 3. 添加 MCP 服务器（脚本方式）
-
-```json
-{
-  "mcp.servers": {
-    "cortex": {
-      "command": "/Users/jal/school/Cortex/cortex-backend/start-mcp.sh"
-    }
-  }
-}
-```
-
-### 4. 重启 Cursor
-
-## Continue.dev 配置
-
-Continue 是 VS Code/JetBrains 的 AI 助手。
-
-### 1. 安装 Continue
-在 VS Code 中安装 "Continue" 扩展
-
-### 2. 编辑配置文件
-位置：`~/.continue/config.json`
-
-**简洁方式**：
-```json
-{
-  "mcpServers": {
-    "cortex": {
-      "command": "python",
-      "args": ["-m", "cortex_mcp.server"],
-      "env": {
-        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
-      }
-    }
-  }
-}
-```
-
-**脚本方式**：
-```json
-{
-  "mcpServers": {
-    "cortex": {
-      "command": "/Users/jal/school/Cortex/cortex-backend/start-mcp.sh"
-    }
-  }
-}
-```
-
-## 自定义 Agent 配置
-
-如果你正在开发自定义 AI Agent，可以使用 MCP SDK 直接集成。
-
-### Python 示例
-
-```python
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-# 创建 MCP 客户端
-server_params = StdioServerParameters(
-    command="python",
-    args=["-m", "cortex_mcp.server"],
-    env={
-        "PYTHONPATH": "/path/to/cortex-backend"
-    }
-)
-
-async def main():
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            # 初始化连接
-            await session.initialize()
-
-            # 列出工具
-            tools = await session.list_tools()
-            print(f"Available tools: {[t.name for t in tools.tools]}")
-
-            # 调用工具
-            result = await session.call_tool("list_tasks", {})
-            print(result.content)
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
-```
-
-### JavaScript/Node.js 示例
-
-```javascript
-const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
-
-const transport = new StdioClientTransport({
-  command: 'python',
-  args: ['-m', 'cortex_mcp.server'],
-  env: {
-    PYTHONPATH: '/path/to/cortex-backend'
-  }
-});
-
-const client = new Client({
-  name: 'my-agent',
-  version: '1.0.0'
-});
-
-async function main() {
-  await client.connect(transport);
-
-  // 初始化
-  await client.initialize();
-
-  // 列出工具
-  const tools = await client.listTools();
-  console.log('Available tools:', tools.tools.map(t => t.name));
-
-  // 调用工具
-  const result = await client.callTool({
-    name: 'list_tasks',
-    arguments: {}
-  });
-  console.log(result.content);
-}
-
-main().catch(console.error);
-```
-
-## 验证配置
-
-### 方法 1: 在 Claude Desktop 中验证
-
-1. 打开 Claude Desktop
-2. 在对话中输入："列出我的任务"
-3. 如果配置正确，AI 会调用 `list_tasks` 工具
-
-### 方法 2: 查看日志
-
-**Claude Desktop 日志位置**：
-- macOS: `~/Library/Logs/Claude/`
-- Windows: `%APPDATA%\Claude\logs\`
-- Linux: `~/.config/Claude/logs/`
-
-查找 `mcp-server-cortex.log` 文件，检查是否有错误。
-
-### 方法 3: 测试 MCP 服务器
-
-```bash
-cd cortex-backend
-./start-mcp.sh --help
-```
-
-或直接测试：
-```bash
-cd cortex-backend
-source .venv/bin/activate
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | python -m cortex_mcp.server
-```
+1. 更新您的配置以使用 npm 包（参见上文示例）
+2. Python MCP 服务器已被弃用
+3. 此包保留了所有功能
 
 ## 使用示例
 
@@ -392,13 +143,6 @@ call_tool("list_tasks", {})
       "status": "TODO",
       "priority": "HIGH",
       "branch_name": null
-    },
-    {
-      "id": 2,
-      "title": "修复页面样式问题",
-      "status": "IN_PROGRESS",
-      "priority": "MEDIUM",
-      "branch_name": "feature/task-2-a1b2c3d4"
     }
   ]
 }
@@ -513,16 +257,14 @@ call_tool("complete_task", {})
 
 ### MCP 服务器无法启动
 
-1. **检查 Python 路径**：
+1. **检查 Node.js 版本**：
    ```bash
-   which python
-   # 或
-   echo $VIRTUAL_ENV
+   node --version
    ```
 
 2. **测试 MCP 服务器**：
    ```bash
-   python -m cortex_mcp.server
+   npx @cortex/cli-mcp@latest --help
    ```
 
 3. **查看 Claude Desktop 日志**：
@@ -547,38 +289,19 @@ call_tool("complete_task", {})
 
 ## 高级配置
 
-### 使用虚拟环境
+### 使用特定版本
 
-如果你的 Cortex CLI 安装在虚拟环境中，确保配置指向正确的 Python 解释器：
+如需使用特定版本：
 
 ```json
 {
   "mcpServers": {
     "cortex": {
-      "command": "/path/to/.venv/bin/python",
+      "command": "npx",
       "args": [
-        "-m",
-        "cortex_mcp.server"
-      ],
-      "env": {
-        "PYTHONPATH": "/path/to/cortex-backend",
-        "PATH": "/path/to/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-      }
+        "@cortex/cli-mcp@1.0.0"
+      ]
     }
-  }
-}
-```
-
-### 环境变量
-
-可以在 `env` 中添加额外的环境变量：
-
-```json
-{
-  "env": {
-    "PYTHONPATH": "/path/to/cortex-backend",
-    "CORTEX_API_URL": "http://localhost:8000",
-    "CORPLEX_LOG_LEVEL": "DEBUG"
   }
 }
 ```
@@ -600,5 +323,5 @@ call_tool("complete_task", {})
 
 如果遇到问题，请：
 1. 查看 [故障排查](#故障排查) 部分
-2. 检查 [OpenSpec Issues](../../openspec/changes/add-mcp-server/)
+2. 检查 [OpenSpec Issues](../../openspec/changes/refactor-mcp-to-npm/)
 3. 在项目中创建 Issue
