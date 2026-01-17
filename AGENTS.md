@@ -55,30 +55,6 @@ tail -f logs/backend.log
 # 前端日志
 tail -f logs/frontend.log
 ```
-
-### 启动 MCP 服务器
-```bash
-# 方式1: 使用启动脚本（推荐，自动处理架构问题）
-cd cortex-backend
-./start-mcp.sh
-
-# 方式2: 手动启动
-cd cortex-backend
-source .venv/bin/activate
-python -m cortex_mcp.server
-```
-
-**说明**：MCP 服务器主要用于集成到 Claude Desktop 等 AI 工具。
-
-**配置方法**：详见 [docs/mcp-integration.md](./docs/mcp-integration.md)，支持配置到：
-- Claude Desktop
-- Cline (VS Code)
-- Cursor
-- Continue.dev
-- 自定义 AI Agent
-
-**架构兼容性**: 如果遇到架构不兼容问题，启动脚本会自动检测并尝试修复。详见 [docs/mcp-architecture-fix.md](./docs/mcp-architecture-fix.md)
-
 ## Git 提交规范
 
 ### 查看当前状态
@@ -181,6 +157,24 @@ openspec init --tools claude,cline
 
 ctx 是 Cortex 项目的任务管理 CLI 工具。
 
+### 任务开发流程 ⚠️ 强制执行
+
+开发新功能时，**必须**遵循以下流程：
+
+```bash
+# 1. 创建任务（在 PingCode Ship 中创建，或使用 CLI）
+# 2. 开始任务（自动生成分支、绑定任务、切换分支）
+ctx tasks start <任务ID>
+
+# 3. 开发过程中可使用 git commit 提交代码
+
+# 4. 完成开发后提交任务（更新状态、Git Push、打开 PR）
+ctx tasks pr
+
+# 5. PR 合并后完成任务（切换回主分支、更新状态、清理分支）
+ctx tasks done
+```
+
 ### 认证命令
 ```bash
 # 登录到 Cortex 系统
@@ -192,6 +186,9 @@ ctx auth logout
 
 ### 任务命令
 ```bash
+# 新建任务（通过 API 创建）
+ctx tasks new "任务标题" 2026-02-01 --type feature --priority medium --desc "任务描述"
+
 # 列出分配给当前用户的任务
 ctx tasks list
 
