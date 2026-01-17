@@ -12,11 +12,14 @@
   },
   "files": [
     "dist",
+    "tests",
     "README.md"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
@@ -34,12 +37,13 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
-    "zod": "^4.0.0",
-    "execa": "^9.5.0"
+    "execa": "^9.5.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "typescript": "^5.7.2"
+    "@types/node": "^22.19.7",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.17"
   },
   "repository": {
     "type": "git",
