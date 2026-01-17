@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip } from 'antd';
+import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker } from 'antd';
 import { PlusOutlined, MoreOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -90,6 +90,7 @@ export const KanbanBoard: React.FC = () => {
             ...values,
             project_id: Number(projectId),
             status: TaskStatus.TODO,
+            deadline: values.deadline?.format('YYYY-MM-DD'),
         });
     };
 
@@ -260,6 +261,21 @@ export const KanbanBoard: React.FC = () => {
                             <Option value="MEDIUM">中 (Medium)</Option>
                             <Option value="LOW">低 (Low)</Option>
                         </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="deadline"
+                        label="截止日期"
+                        rules={[{ required: true, message: '请选择截止日期' }]}
+                    >
+                        <DatePicker
+                            style={{ width: '100%', borderRadius: 6 }}
+                            placeholder="选择截止日期"
+                            format="YYYY-MM-DD"
+                            disabledDate={(current: any) => {
+                                return current && current < new Date();
+                            }}
+                        />
                     </Form.Item>
 
                     <Form.Item name="description" label="详细描述">

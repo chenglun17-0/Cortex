@@ -1,0 +1,3 @@
+tor = "app.db.TORTOISE_ORM"
+out_dir = "migrations"
+

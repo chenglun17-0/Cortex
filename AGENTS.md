@@ -143,3 +143,88 @@ git push
 # 推送并设置上游分支
 git push -u origin <分支名>
 ```
+
+## OpenSpec 命令
+
+OpenSpec 是 AI 原生的规范驱动开发系统。
+
+### 常用命令
+```bash
+# 初始化 OpenSpec（在项目根目录执行）
+openspec init
+
+# 更新 OpenSpec 指令文件
+openspec update
+
+# 列出变更提案
+openspec list
+
+# 查看规范或变更详情
+openspec show <名称>
+
+# 验证变更和规范
+openspec validate
+
+# 归档完成的变更
+openspec archive <变更名称>
+```
+
+### 初始化 OpenSpec
+```bash
+# 初始化并配置 AI 工具
+openspec init --tools claude,cline
+
+# 支持的工具：amazon-q, antigravity, auggie, claude, cline, codex, continue, cursor, factory, gemini, github-copilot, opencode, windsurf 等
+```
+
+## Cortex 任务管理命令 (ctx)
+
+ctx 是 Cortex 项目的任务管理 CLI 工具。
+
+### 认证命令
+```bash
+# 登录到 Cortex 系统
+ctx auth login
+
+# 注销登录（删除本地凭证）
+ctx auth logout
+```
+
+### 任务命令
+```bash
+# 列出分配给当前用户的任务
+ctx tasks list
+
+# 开始任务（自动生成分支、绑定任务、切换分支）
+ctx tasks start <任务ID>
+
+# 提交任务（识别分支、更新状态、Git Push、打开 PR）
+ctx tasks pr
+
+# 完成任务（切换回主分支、更新状态、清理分支）
+ctx tasks done
+```
+
+### 配置命令
+```bash
+# 列出当前所有配置
+ctx config list
+
+# 设置配置项
+ctx config set <键> <值>
+```
+
+### 数据库迁移命令
+```bash
+cd cortex-backend
+
+# 生成新迁移（模型变更后）
+source .venv/bin/activate
+aerich migrate
+
+# 应用所有迁移
+aerich upgrade
+
+# 回滚迁移
+aerich downgrade
+```

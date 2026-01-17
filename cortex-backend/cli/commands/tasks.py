@@ -3,6 +3,7 @@ import webbrowser
 import re
 import json
 import typer
+from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 from cli.api import client
@@ -24,6 +25,58 @@ from cli.git import (
 
 app = typer.Typer()
 console = Console()
+
+@app.command(name="new")
+def create_task(
+    title: str = typer.Argument(..., help="任务标题"),
+    deadline: str = typer.Argument(..., help="截止日期 (YYYY-MM-DD)"),
+    type: str = typer.Option("feature", "--type", "-t", help="任务类型"),
+    priority: str = typer.Option("medium", "--priority", "-p", help="优先级"),
+    description: str = typer.Option("", "--desc", "-d", help="任务描述"),
+):
+    """
+    新建任务: 通过 cortex-backend API 创建新任务
+    """
+    api = client()
+
+    try:
+        datetime.strptime(deadline, "%Y-%m-%d").date()
+    except ValueError:
+        console.print(f"[red]Invalid date format. Use YYYY-MM-DD[/red]")
+        raise typer.Exit(1)
+
+    project_id = get_config_value("default_project_id")
+    if not project_id:
+        console.print("[red]Please set default_project_id in config[/red]")
+        raise typer.Exit(1)
+
+    task_data = {
+        "title": title,
+        "project_id": int(project_id),
+        "deadline": deadline,
+        "priority": priority.upper(),
+        "status": "TODO",
+    }
+
+    if description:
+        task_data["description"] = f"[{type}]\n{description}"
+    else:
+        task_data["description"] = f"[{type}]"
+
+    try:
+        response = api.post("/tasks/", json_data=task_data)
+        if response.status_code != 200:
+            console.print(f"[red]Failed to create task: {response.text}[/red]")
+            raise typer.Exit(1)
+
+        task = response.json()
+        console.print(f"[green]✔ Task created successfully![/green]")
+        console.print(f"[cyan]Task ID: {task['id']}[/cyan]")
+        console.print(f"[cyan]Title: {task['title']}[/cyan]")
+        console.print(f"[cyan]Deadline: {task['deadline']}[/cyan]")
+    except Exception as e:
+        console.print(f"[red]Connection error: {e}[/red]")
+        raise typer.Exit(1)
 
 @app.command(name="list")
 def list_tasks(json_output: bool = typer.Option(False, "--json", help="以 JSON 格式输出")):

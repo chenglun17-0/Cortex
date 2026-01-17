@@ -8,6 +8,7 @@ class Task(models.Model):
     status = fields.CharField(max_length=20, default="TODO", index=True)
     priority = fields.CharField(max_length=20, default="MEDIUM")
     branch_name = fields.CharField(max_length=255, null=True, index=True)
+    deadline = fields.DateField(null=True)
     # 外键关系
     project = fields.ForeignKeyField(
         "models.Project",
