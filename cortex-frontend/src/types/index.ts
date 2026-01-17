@@ -47,6 +47,9 @@ export interface Task {
   priority?: string;
   assignee_id?: number;
   project_id: number;
+  branch_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TaskUpdate {

@@ -5,7 +5,8 @@ import { PlusOutlined, MoreOutlined, ClockCircleOutlined } from '@ant-design/ico
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
-import { type Task, TaskStatus } from '../../types';
+import { getProjects } from '../projects/service';
+import { type Task, TaskStatus, type Project } from '../../types';
 
 
 const { Title, Text } = Typography;
@@ -21,13 +22,18 @@ const COLUMNS = [
 
 const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
   const colors: Record<string, string> = {
-    High: 'red',
-    Medium: 'orange',
-    Low: 'blue',
+    HIGH: 'red',
+    MEDIUM: 'orange',
+    LOW: 'blue',
+  };
+  const textMap: Record<string, string> = {
+    HIGH: '高',
+    MEDIUM: '中',
+    LOW: '低',
   };
   return (
     <Tag color={colors[priority] || 'default'} bordered={false} style={{ fontSize: '10px', lineHeight: '16px' }}>
-      {priority}
+      {textMap[priority] || priority}
     </Tag>
   );
 };
@@ -39,11 +45,23 @@ export const KanbanBoard: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
 
-    const { data: tasks = [], isLoading } = useQuery({
+    const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
         queryKey: ['tasks', projectId],
         queryFn: () => getTasksByProject(projectId!),
         enabled: !!projectId,
     });
+
+    const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
+        queryKey: ['projects'],
+        queryFn: getProjects,
+    });
+
+    // 查找当前项目
+    const currentProject = useMemo(() => {
+        return projects.find((p: Project) => p.id === Number(projectId));
+    }, [projects, projectId]);
+
+    const isLoading = isLoadingTasks || isLoadingProjects;
 
     const updateTaskMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: TaskStatus }) =>
@@ -108,14 +126,15 @@ export const KanbanBoard: React.FC = () => {
             {/* 顶部导航与操作 */}
             <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <Breadcrumb 
+                  <Breadcrumb
                     items={[
-                      { title: <a onClick={() => navigate('/')}>项目列表</a> },
-                      { title: `项目看板` },
-                    ]} 
+                      { title: <a onClick={() => navigate('/')}>工作台</a> },
+                      { title: <a onClick={() => navigate('/projects')}>项目列表</a> },
+                      { title: currentProject?.name || `项目 ${projectId}` },
+                    ]}
                     style={{ marginBottom: 8 }}
                   />
-                  <Title level={3} style={{ margin: 0 }}>迭代看板</Title>
+                  <Title level={3} style={{ margin: 0 }}>{currentProject?.name || `项目 ${projectId}`}</Title>
                 </div>
 
                 <Button
@@ -189,7 +208,7 @@ export const KanbanBoard: React.FC = () => {
                                                   >
                                                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                                                         <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>#{task.id}</Text>
-                                                        <PriorityTag priority={task.priority || "Medium"} />
+                                                        <PriorityTag priority={task.priority || "MEDIUM"} />
                                                       </div>
                                                       <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: 12, lineHeight: 1.5 }}>
                                                         {task.title}
@@ -235,11 +254,11 @@ export const KanbanBoard: React.FC = () => {
                         <Input placeholder="例如：实现登录接口" style={{ borderRadius: 6 }} />
                     </Form.Item>
 
-                    <Form.Item name="priority" label="优先级" initialValue="Medium">
+                    <Form.Item name="priority" label="优先级" initialValue="MEDIUM">
                         <Select style={{ borderRadius: 6 }}>
-                            <Option value="High">高 (High)</Option>
-                            <Option value="Medium">中 (Medium)</Option>
-                            <Option value="Low">低 (Low)</Option>
+                            <Option value="HIGH">高 (High)</Option>
+                            <Option value="MEDIUM">中 (Medium)</Option>
+                            <Option value="LOW">低 (Low)</Option>
                         </Select>
                     </Form.Item>
 

@@ -7,6 +7,8 @@ import {
   LogoutOutlined,
   UserOutlined,
   DashboardOutlined,
+  CheckSquareOutlined,
+  BorderlessTableOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -47,6 +49,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       label: '工作台',
     },
     {
+      key: '/tasks',
+      icon: <CheckSquareOutlined />,
+      label: '我的任务',
+    },
+    {
+      key: '/board',
+      icon: <BorderlessTableOutlined />,
+      label: '任务看板',
+    },
+    {
       key: '/projects',
       icon: <ProjectOutlined />,
       label: '项目管理',
@@ -58,10 +70,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: 'profile',
       label: '个人信息',
       icon: <UserOutlined />,
-      onClick: handleProfileClick, // Add onClick handler
+      onClick: handleProfileClick,
     },
     {
-      type: 'divider',
+      type: 'divider' as const,
     },
     {
       key: 'logout',

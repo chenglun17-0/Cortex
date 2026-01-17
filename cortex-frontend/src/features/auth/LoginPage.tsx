@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message, Layout, ConfigProvider } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Layout } from 'antd';
 import { UserOutlined, LockOutlined, RocketOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { http } from '../../lib/http';

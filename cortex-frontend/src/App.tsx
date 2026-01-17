@@ -7,8 +7,11 @@ import { LoginPage } from './features/auth/LoginPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { KanbanBoard } from './features/tasks/KanbanBoard';
+import { TaskListPage } from './features/tasks/TaskListPage';
+import { TaskDetailPage } from './features/tasks/TaskDetailPage';
+import { TaskBoardPage } from './features/tasks/TaskBoardPage';
 import { MainLayout } from './components/layout/MainLayout';
-import { ProfilePage } from './features/auth/ProfilePage'; // Import ProfilePage
+import { ProfilePage } from './features/auth/ProfilePage';
 
 // 路由守卫组件 (PrivateRoute)
 // 使用 React.ReactNode 作为 children 的类型，容错率更高
@@ -45,7 +48,10 @@ const App: React.FC = () => {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/:projectId" element={<KanbanBoard />} />
-                <Route path="/profile" element={<ProfilePage />} /> {/* Add ProfilePage route */}
+                <Route path="/tasks" element={<TaskListPage />} />
+                <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+                <Route path="/board" element={<TaskBoardPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Route>
           </Routes>

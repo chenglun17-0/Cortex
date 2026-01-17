@@ -13,7 +13,7 @@ import { getProjects } from '../projects/service';
 import { getCurrentUser } from '../auth/service';
 import { TaskStatus } from '../../types';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export const DashboardPage: React.FC = () => {
     const navigate = useNavigate();
