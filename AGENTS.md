@@ -34,3 +34,89 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - 粒度：目标耗时 ≤ 1 小时；超出则先拆分
 - **目录规范** 根目录下不随意添加文件，文档优先生成在 docs 下，脚本优先生成在 scripts 下，如必须，则尽可能放在 tmp 目录下下
 - **一致性原则**：本项目长期维护，需要尽可能保持约定和规则的一致，包括但不限于各类技术栈、约定、行为描述、规则、依赖等。如出现与本文描述不一致的情况，先提示确认，确保降低不一致性的情况是已知的、可控的
+
+## 快速启动命令
+
+### 启动前后端服务
+```bash
+./scripts/start-all.sh
+```
+
+### 停止前后端服务
+```bash
+./scripts/stop-all.sh
+```
+
+### 查看日志
+```bash
+# 后端日志
+tail -f logs/backend.log
+
+# 前端日志
+tail -f logs/frontend.log
+```
+
+## Git 提交规范
+
+### 查看当前状态
+```bash
+# 查看当前分支和未提交的文件
+git status
+
+# 查看未暂存的修改
+git diff
+
+# 查看已暂存的修改
+git diff --staged
+```
+
+### 添加文件到暂存区
+```bash
+# 添加所有修改的文件
+git add .
+
+# 添加特定文件
+git add <文件路径>
+```
+
+### 提交更改
+```bash
+# 提交暂存的文件
+git commit -m "<业务功能描述>"
+
+# 示例提交信息
+git commit -m "feat: 添加用户登录功能"
+git commit -m "fix: 修复任务状态更新的bug"
+git commit -m "docs: 更新API文档"
+git commit -m "style: 优化前端页面样式"
+```
+
+### Commit Message 规范
+```
+<类型>: <简短的业务功能描述>
+
+[可选的详细说明]
+
+类型：
+- feat: 新功能
+- fix: 修复bug
+- docs: 文档更新
+- style: 代码格式/样式调整
+- refactor: 重构代码
+- test: 测试相关
+- chore: 构建/工具相关
+
+示例：
+feat: 实现用户注册和登录功能
+fix: 修复任务列表分页显示错误
+docs: 补充快速启动文档
+```
+
+### 推送到远程
+```bash
+# 推送当前分支
+git push
+
+# 推送并设置上游分支
+git push -u origin <分支名>
+```
