@@ -9,7 +9,29 @@
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-### 2. 添加配置
+### 2. 添加配置（方式1：简洁推荐）
+
+```json
+{
+  "mcpServers": {
+    "cortex": {
+      "command": "python",
+      "args": [
+        "-m",
+        "cortex_mcp.server"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
+      }
+    }
+  }
+}
+```
+
+### 3. 添加配置（方式2：处理架构问题）
+
+如果遇到架构不兼容问题，使用启动脚本：
+
 ```json
 {
   "mcpServers": {
@@ -21,11 +43,18 @@
 }
 ```
 
-### 3. 替换路径
-将 `/Users/jal/school/Cortex/cortex-backend/start-mcp.sh` 替换为你的实际路径
+### 4. 替换路径
+将 `/Users/jal/school/Cortex/cortex-backend` 替换为你的实际路径
 
-### 4. 重启 Claude Desktop
+### 5. 重启 Claude Desktop
 重启应用以加载新的 MCP 服务器
+
+### 配置说明
+
+| 配置方式 | 适用场景 | 优点 | 缺点 |
+|---------|---------|------|------|
+| Python 模块 | 大多数情况 | 简洁，类似 npm 包 | 可能遇到架构问题 |
+| 启动脚本 | 架构不兼容时 | 自动检测和修复 | 需要绝对路径 |
 
 ## 其他 AI 工具配置
 
@@ -126,8 +155,23 @@ Cline 是 VS Code 的 AI 助手扩展，支持 MCP。
 ### 1. 安装 Cline
 在 VS Code 中搜索并安装 "Cline" 扩展
 
-### 2. 配置 MCP
-打开 VS Code 设置 (`Cmd+,`)，搜索 "Cline MCP"，或编辑设置文件：
+### 2. 配置 MCP（简洁方式）
+
+```json
+{
+  "cline.mcpServers": {
+    "cortex": {
+      "command": "python",
+      "args": ["-m", "cortex_mcp.server"],
+      "env": {
+        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
+      }
+    }
+  }
+}
+```
+
+### 3. 配置 MCP（脚本方式）
 
 ```json
 {
@@ -139,7 +183,7 @@ Cline 是 VS Code 的 AI 助手扩展，支持 MCP。
 }
 ```
 
-### 3. 重启 VS Code
+### 4. 重启 VS Code
 使配置生效
 
 ## Cursor 配置
@@ -149,7 +193,24 @@ Cursor 是基于 AI 的代码编辑器，内置 MCP 支持。
 ### 1. 打开设置
 `Cmd+,` → 搜索 "MCP"
 
-### 2. 添加 MCP 服务器
+### 2. 添加 MCP 服务器（简洁方式）
+
+```json
+{
+  "mcp.servers": {
+    "cortex": {
+      "command": "python",
+      "args": ["-m", "cortex_mcp.server"],
+      "env": {
+        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
+      }
+    }
+  }
+}
+```
+
+### 3. 添加 MCP 服务器（脚本方式）
+
 ```json
 {
   "mcp.servers": {
@@ -160,7 +221,7 @@ Cursor 是基于 AI 的代码编辑器，内置 MCP 支持。
 }
 ```
 
-### 3. 重启 Cursor
+### 4. 重启 Cursor
 
 ## Continue.dev 配置
 
@@ -172,6 +233,22 @@ Continue 是 VS Code/JetBrains 的 AI 助手。
 ### 2. 编辑配置文件
 位置：`~/.continue/config.json`
 
+**简洁方式**：
+```json
+{
+  "mcpServers": {
+    "cortex": {
+      "command": "python",
+      "args": ["-m", "cortex_mcp.server"],
+      "env": {
+        "PYTHONPATH": "/Users/jal/school/Cortex/cortex-backend"
+      }
+    }
+  }
+}
+```
+
+**脚本方式**：
 ```json
 {
   "mcpServers": {
