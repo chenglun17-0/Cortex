@@ -1,6 +1,7 @@
 import secrets
 import webbrowser
 import re
+import json
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -25,7 +26,7 @@ app = typer.Typer()
 console = Console()
 
 @app.command(name="list")
-def list_tasks():
+def list_tasks(json_output: bool = typer.Option(False, "--json", help="以 JSON 格式输出")):
     """
     列出分配给当前用户的任务
     """
@@ -46,10 +47,18 @@ def list_tasks():
 
     # 3. 处理空数据
     if not tasks:
-        console.print("[yellow]You have no assigned tasks. Good job![/yellow]")
+        if json_output:
+            console.print(json.dumps({"tasks": [], "message": "No assigned tasks"}, ensure_ascii=False))
+        else:
+            console.print("[yellow]You have no assigned tasks. Good job![/yellow]")
         return
 
-    # 4. 渲染表格
+    # 4. JSON 输出
+    if json_output:
+        console.print(json.dumps({"tasks": tasks}, ensure_ascii=False, indent=2))
+        return
+
+    # 5. 渲染表格
     table = Table()
 
     # 定义列
