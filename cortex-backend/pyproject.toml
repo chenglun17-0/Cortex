@@ -16,19 +16,21 @@ dependencies = [
     "rich",
     "tortoise-orm",
     "asyncpg",
-    "pydantic",
+    "pydantic[email]",
     "fastapi",
     "uvicorn",
     "python-multipart",
     "pyjwt",
     "passlib",
-    "bcrypt"
+    "bcrypt",
+    "mcp"
 ]
 
 # 这里定义命令行入口
 # 意思是：当用户输入 ctx 时，运行 cli.main 模块里的 app 对象
 [project.scripts]
 ctx = "cli.main:app"
+cortex-mcp = "cortex_mcp.server:start"
 
 [tool.setuptools.packages.find]
-include = ["cli*", "app*"] # 包含 cli 和 app 包
+include = ["cli*", "app*", "cortex_mcp*"] # 包含 cli、app 和 cortex_mcp 包
