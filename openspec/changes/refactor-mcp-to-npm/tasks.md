@@ -42,3 +42,12 @@
 - [x] 8.1 删除 Python MCP 实现（cortex-backend/cortex_mcp/）
 - [x] 8.2 更新 cortex-backend/pyproject.toml（移除 cortex-mcp 入口）
 - [x] 8.3 删除 docs/mcp-architecture-fix.md
+
+---
+
+**状态**: 已完成核心实现，待发布 npm 包
+
+**剩余任务**:
+- 编写测试
+- 发布到 npm
+- 集成测试
