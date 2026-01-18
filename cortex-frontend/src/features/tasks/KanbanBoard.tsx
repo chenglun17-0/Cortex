@@ -255,6 +255,22 @@ export const KanbanBoard: React.FC = () => {
                         <Input placeholder="例如：实现登录接口" style={{ borderRadius: 6 }} />
                     </Form.Item>
 
+                    <Form.Item
+                        name="type"
+                        label="任务类型"
+                        initialValue="feature"
+                        rules={[{ required: true, message: '请选择任务类型' }]}
+                    >
+                        <Select style={{ borderRadius: 6 }}>
+                            <Option value="feature">新功能 (feature)</Option>
+                            <Option value="bug">Bug 修复 (bug)</Option>
+                            <Option value="docs">文档更新 (docs)</Option>
+                            <Option value="fix">修复 (fix)</Option>
+                            <Option value="chore">构建 (chore)</Option>
+                            <Option value="refactor">重构 (refactor)</Option>
+                        </Select>
+                    </Form.Item>
+
                     <Form.Item name="priority" label="优先级" initialValue="MEDIUM">
                         <Select style={{ borderRadius: 6 }}>
                             <Option value="HIGH">高 (High)</Option>

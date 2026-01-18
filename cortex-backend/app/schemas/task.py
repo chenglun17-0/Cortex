@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
+    type: str = "feature"
     priority: str = "MEDIUM"
     status: str = "TODO"
     deadline: Optional[date] = None
@@ -19,6 +20,7 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    type: Optional[str] = None
     priority: Optional[str] = None
     status: Optional[str] = None
     branch_name: Optional[str] = None

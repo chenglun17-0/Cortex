@@ -160,10 +160,11 @@ def start(task_id: int):
     task = response.json()
 
     branch_name = task.get('branch_name')
+    branch_type = task.get('type', 'feature')
     is_new_branch = False
     if not branch_name:
         # 数据库没存，生成新的
-        branch_name = generate_random_branch_name(task_id)
+        branch_name = generate_random_branch_name(task_id, branch_type)
         is_new_branch = True
         console.print(f"[yellow]⚡ Generated new branch name: {branch_name}[/yellow]")
     else:

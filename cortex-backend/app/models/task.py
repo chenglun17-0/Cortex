@@ -6,6 +6,7 @@ class Task(models.Model):
     description = fields.TextField(null=True)
 
     status = fields.CharField(max_length=20, default="TODO", index=True)
+    type = fields.CharField(max_length=20, default="feature", index=True)
     priority = fields.CharField(max_length=20, default="MEDIUM")
     branch_name = fields.CharField(max_length=255, null=True, index=True)
     deadline = fields.DateField(null=True)
