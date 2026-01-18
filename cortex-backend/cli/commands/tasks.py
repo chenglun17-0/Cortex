@@ -26,6 +26,9 @@ from cli.git import (
 app = typer.Typer()
 console = Console()
 
+BRANCH_TYPES = ["feature", "bug", "docs", "fix", "chore", "refactor"]
+BRANCH_PATTERN = re.compile(r"(feature|bug|docs|fix|chore|refactor)/task-(\d+)-")
+
 @app.command(name="new")
 def create_task(
     title: str = typer.Argument(..., help="任务标题"),
@@ -199,14 +202,15 @@ def pr():
     branch_name = get_current_branch()
 
     # 2. 从分支名提取任务 ID
-    # 匹配模式: feature/task-{id}-{suffix}
-    match = re.match(r"feature/task-(\d+)-", branch_name)
+    # 匹配模式: {type}/task-{id}-{suffix}
+    match = BRANCH_PATTERN.match(branch_name)
     if not match:
         console.print(f"[red]Current branch '{branch_name}' is not a valid Cortex task branch.[/red]")
-        console.print("Branch name must start with 'feature/task-{id}-'.")
+        console.print(f"Branch name must match '{{type}}/task-{{id}}-{{suffix}}'.")
+        console.print(f"Supported types: {', '.join(BRANCH_TYPES)}")
         raise typer.Exit(1)
 
-    task_id = int(match.group(1))
+    task_id = int(match.group(2))
 
     if has_uncommitted_changes():
         console.print("[yellow]⚡ Detected uncommitted changes.[/yellow]")
@@ -271,13 +275,15 @@ def done():
 
     # 1. 识别当前任务分支
     feature_branch = get_current_branch()
-    match = re.match(r"feature/task-(\d+)-", feature_branch)
+    match = BRANCH_PATTERN.match(feature_branch)
 
     if not match:
         console.print(f"[red]Current branch '{feature_branch}' is not a valid Cortex task branch.[/red]")
+        console.print(f"Branch name must match '{{type}}/task-{{id}}-{{suffix}}'.")
+        console.print(f"Supported types: {', '.join(BRANCH_TYPES)}")
         raise typer.Exit(1)
 
-    task_id = int(match.group(1))
+    task_id = int(match.group(2))
     main_branch = get_main_branch()
     console.print(f"[cyan]🚀 Wrapping up task #{task_id}...[/cyan]")
 
@@ -312,11 +318,11 @@ def done():
         raise typer.Exit(1)
 
 
-def generate_random_branch_name(task_id: int) -> str:
+def generate_random_branch_name(task_id: int, branch_type: str = "feature") -> str:
     """
     生成随机分支名
-    格式: feature/task-{id}-{随机8位字符}
-    例如: feature/task-2-a1b2c3d4
+    格式: {type}/task-{id}-{随机8位字符}
+    例如: feature/task-2-a1b2c3d4, bug/task-3-c3d4e5f6
     """
-    random_suffix = secrets.token_hex(4) # 生成8位 hex 字符串
-    return f"feature/task-{task_id}-{random_suffix}"
+    random_suffix = secrets.token_hex(4)
+    return f"{branch_type}/task-{task_id}-{random_suffix}"
