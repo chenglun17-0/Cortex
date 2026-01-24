@@ -40,10 +40,10 @@ export const LoginPage: React.FC = () => {
     return (
     <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}>
       <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-        <Card 
-          bordered={false}
-          style={{ 
-            width: 400, 
+        <Card
+          variant="borderless"
+          style={{
+            width: 400,
             borderRadius: 16,
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}

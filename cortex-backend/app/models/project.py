@@ -1,9 +1,14 @@
+from datetime import datetime
 from tortoise import fields, models
 
 class Project(models.Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100, index=True)
     description = fields.TextField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+    # 软删除标记
+    deleted_at = fields.DatetimeField(null=True)
 
     organization = fields.ForeignKeyField(
         "models.Organization", related_name="projects", null=True

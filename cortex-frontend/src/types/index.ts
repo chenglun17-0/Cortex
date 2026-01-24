@@ -5,13 +5,6 @@ export interface User {
     is_active: boolean;
 }
 
-export interface User {
-    id: number;
-    email: string;
-    username: string;
-    is_active: boolean;
-}
-
 export interface UserUpdateProfile {
     username?: string;
     old_password?: string;
@@ -23,11 +16,19 @@ export interface Project {
     name: string;
     description?: string;
     owner_id: number;
+    organization_id?: number;
+    members: User[];
     created_at?: string;
+    updated_at?: string;
 }
 
 export interface ProjectCreate {
     name: string;
+    description?: string;
+}
+
+export interface ProjectUpdate {
+    name?: string;
     description?: string;
 }
 

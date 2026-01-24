@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker } from 'antd';
-import { PlusOutlined, MoreOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm } from 'antd';
+import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
-import { getProjects } from '../projects/service';
-import { type Task, TaskStatus, type Project } from '../../types';
+import { getProjects, getProjectMembers, addProjectMember, removeProjectMember, searchUsers } from '../projects/service';
+import { type Task, TaskStatus, type Project, type User } from '../../types';
 
 
 const { Title, Text } = Typography;
@@ -32,7 +32,7 @@ const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
     LOW: '低',
   };
   return (
-    <Tag color={colors[priority] || 'default'} bordered={false} style={{ fontSize: '10px', lineHeight: '16px' }}>
+    <Tag color={colors[priority] || 'default'} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
       {textMap[priority] || priority}
     </Tag>
   );
@@ -43,7 +43,10 @@ export const KanbanBoard: React.FC = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [memberDrawerOpen, setMemberDrawerOpen] = useState(false);
+    const [searchKeyword, setSearchKeyword] = useState('');
     const [form] = Form.useForm();
+    const searchInputRef = useRef<any>(null);
 
     const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
         queryKey: ['tasks', projectId],
@@ -62,6 +65,46 @@ export const KanbanBoard: React.FC = () => {
     }, [projects, projectId]);
 
     const isLoading = isLoadingTasks || isLoadingProjects;
+
+    // 成员管理
+    const { data: members = [], refetch: refetchMembers } = useQuery({
+        queryKey: ['projectMembers', projectId],
+        queryFn: () => getProjectMembers(Number(projectId)),
+        enabled: !!projectId && memberDrawerOpen,
+    });
+
+    const { data: searchResults = [], isLoading: isSearching } = useQuery({
+        queryKey: ['userSearch', searchKeyword],
+        queryFn: () => searchUsers(searchKeyword),
+        enabled: searchKeyword.length > 0,
+    });
+
+    const addMemberMutation = useMutation({
+        mutationFn: ({ projectId, userId }: { projectId: number; userId: number }) =>
+            addProjectMember(projectId, userId),
+        onSuccess: () => {
+            message.success('成员添加成功');
+            queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+            setSearchKeyword('');
+        },
+        onError: () => {
+            message.error('添加失败');
+        }
+    });
+
+    const removeMemberMutation = useMutation({
+        mutationFn: ({ projectId, userId }: { projectId: number; userId: number }) =>
+            removeProjectMember(projectId, userId),
+        onSuccess: () => {
+            message.success('成员已移除');
+            queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+        },
+        onError: () => {
+            message.error('移除失败');
+        }
+    });
 
     const updateTaskMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: TaskStatus }) =>
@@ -94,6 +137,20 @@ export const KanbanBoard: React.FC = () => {
         });
     };
 
+    const handleSearchUser = (keyword: string) => {
+        setSearchKeyword(keyword);
+    };
+
+    const handleAddMember = (userId: number) => {
+        if (!projectId) return;
+        addMemberMutation.mutate({ projectId: Number(projectId), userId });
+    };
+
+    const handleRemoveMember = (userId: number) => {
+        if (!projectId) return;
+        removeMemberMutation.mutate({ projectId: Number(projectId), userId });
+    };
+
     const tasksByStatus = useMemo(() => {
         const grouped: Record<string, Task[]> = {
             [TaskStatus.TODO]: [],
@@ -122,6 +179,10 @@ export const KanbanBoard: React.FC = () => {
 
     if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
 
+    // 已添加的成员 ID 集合，用于过滤搜索结果
+    const addedMemberIds = new Set(members.map((m: User) => m.id));
+    const availableSearchResults = searchResults.filter((u: User) => !addedMemberIds.has(u.id));
+
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* 顶部导航与操作 */}
@@ -138,16 +199,105 @@ export const KanbanBoard: React.FC = () => {
                   <Title level={3} style={{ margin: 0 }}>{currentProject?.name || `项目 ${projectId}`}</Title>
                 </div>
 
-                <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => setIsModalOpen(true)}
-                    size="large"
-                    style={{ borderRadius: 8 }}
-                >
-                    新建任务
-                </Button>
+                <Space>
+                    <Button
+                        icon={<TeamOutlined />}
+                        onClick={() => setMemberDrawerOpen(true)}
+                        style={{ borderRadius: 8 }}
+                    >
+                        成员管理 ({members.length})
+                    </Button>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => setIsModalOpen(true)}
+                        size="large"
+                        style={{ borderRadius: 8 }}
+                    >
+                        新建任务
+                    </Button>
+                </Space>
             </div>
+
+            {/* 成员管理抽屉 */}
+            <Drawer
+                title="项目成员管理"
+                size="small"
+                open={memberDrawerOpen}
+                onClose={() => setMemberDrawerOpen(false)}
+            >
+                {/* 搜索添加成员 */}
+                <div style={{ marginBottom: 16 }}>
+                    <Text strong style={{ display: 'block', marginBottom: 8 }}>添加成员</Text>
+                    <Input
+                        ref={searchInputRef}
+                        placeholder="搜索用户名..."
+                        prefix={<SearchOutlined />}
+                        value={searchKeyword}
+                        onChange={(e) => handleSearchUser(e.target.value)}
+                        allowClear
+                    />
+                    {searchKeyword && (
+                        <List
+                            size="small"
+                            dataSource={availableSearchResults}
+                            loading={isSearching}
+                            style={{ marginTop: 8, maxHeight: 200, overflow: 'auto', border: '1px solid #f0f0f0', borderRadius: 8 }}
+                            renderItem={(user: User) => (
+                                <List.Item
+                                    actions={[
+                                        <Button
+                                            type="primary"
+                                            size="small"
+                                            icon={<UserAddOutlined />}
+                                            onClick={() => handleAddMember(user.id)}
+                                        >
+                                            添加
+                                        </Button>
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        title={user.username}
+                                        description={user.email}
+                                        avatar={<Avatar size="small" icon={<UserOutlined />} />}
+                                    />
+                                </List.Item>
+                            )}
+                        />
+                    )}
+                </div>
+
+                {/* 成员列表 */}
+                <Text strong style={{ display: 'block', marginBottom: 8 }}>当前成员 ({members.length})</Text>
+                <List
+                    dataSource={members}
+                    renderItem={(user: User) => (
+                        <List.Item
+                            actions={[
+                                <Popconfirm
+                                    title="确定要移除此成员吗？"
+                                    onConfirm={() => handleRemoveMember(user.id)}
+                                    okText="确定"
+                                    cancelText="取消"
+                                >
+                                    <Button
+                                        type="text"
+                                        danger
+                                        size="small"
+                                        icon={<UserDeleteOutlined />}
+                                    />
+                                </Popconfirm>
+                            ]}
+                        >
+                            <List.Item.Meta
+                                title={user.username}
+                                description={user.email}
+                                avatar={<Avatar size="small" style={{ backgroundColor: '#6366f1' }}>{user.username[0]?.toUpperCase()}</Avatar>}
+                            />
+                        </List.Item>
+                    )}
+                />
+            </Drawer>
 
 
             {/* 拖拽上下文 */}
@@ -177,9 +327,16 @@ export const KanbanBoard: React.FC = () => {
                                         <Space size={8}>
                                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color }} />
                                           <span style={{ color: '#475569', fontSize: 15 }}>{col.title}</span>
-                                          <Tag bordered={false} style={{ margin: 0, borderRadius: 10, background: '#e2e8f0', color: '#64748b', fontSize: 11 }}>
+                                          <span style={{
+                                            margin: 0,
+                                            borderRadius: 10,
+                                            background: '#e2e8f0',
+                                            color: '#64748b',
+                                            fontSize: 11,
+                                            padding: '2px 6px',
+                                          }}>
                                             {tasksByStatus[col.id]?.length || 0}
-                                          </Tag>
+                                          </span>
                                         </Space>
                                         <Button type="text" size="small" icon={<MoreOutlined />} />
                                     </div>
@@ -194,12 +351,12 @@ export const KanbanBoard: React.FC = () => {
                                                       {...provided.draggableProps}
                                                       {...provided.dragHandleProps}
                                                       size="small"
-                                                      bordered={false}
+                                                      variant="borderless"
                                                       style={{
                                                           marginBottom: '12px',
                                                           borderRadius: '8px',
-                                                          boxShadow: snapshot.isDragging 
-                                                            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' 
+                                                          boxShadow: snapshot.isDragging
+                                                            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                                                             : '0 1px 3px rgba(0, 0, 0, 0.05)',
                                                           border: '1px solid #e2e8f0',
                                                           background: '#fff',

@@ -1,10 +1,19 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException
-from app.schemas.project import ProjectCreate, ProjectRead
-from app.models import Project, ProjectMember, User
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.schemas.project import (
+    ProjectCreate, ProjectRead, ProjectUpdate, ProjectMemberResponse
+)
+from app.models import Project, ProjectMember, User, Task
 from app.api.deps import get_current_user
 
 router = APIRouter()
+
+
+async def get_project_by_id(project_id: int) -> Optional[Project]:
+    """获取项目，不包含已删除的"""
+    project = await Project.filter(id=project_id, deleted_at__isnull=True).first()
+    return project
 
 
 @router.post("/", response_model=ProjectRead)
@@ -42,6 +51,178 @@ async def create_project(
 async def read_my_projects(
         current_user: User = Depends(get_current_user)
 ):
-    # 查询我参与的所有项目
-    projects = await Project.filter(members__id=current_user.id).all()
-    return projects
+    # 查询我参与的所有项目（不包含已删除的）
+    projects = await Project.filter(
+        members__id=current_user.id,
+        deleted_at__isnull=True
+    ).all()
+
+    # 格式化返回数据
+    result = []
+    for project in projects:
+        memberships = await ProjectMember.filter(project=project).prefetch_related("user")
+        members = [m.user for m in memberships]
+
+        result.append({
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "owner_id": project.owner_id,
+            "organization_id": project.organization_id,
+            "members": members,
+            "created_at": project.created_at.isoformat() if project.created_at else None,
+            "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+        })
+
+    return result
+
+
+@router.get("/{project_id}", response_model=ProjectRead)
+async def read_project(
+        project_id: int,
+        current_user: User = Depends(get_current_user)
+):
+    """获取项目详情，包含成员列表"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 获取成员列表
+    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
+    members = [m.user for m in memberships]
+
+    # 构建返回数据
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "owner_id": project.owner_id,
+        "organization_id": project.organization_id,
+        "members": members,
+        "created_at": project.created_at.isoformat() if project.created_at else None,
+        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+    }
+
+
+@router.patch("/{project_id}", response_model=ProjectRead)
+async def update_project(
+        project_id: int,
+        project_in: ProjectUpdate,
+        current_user: User = Depends(get_current_user)
+):
+    """更新项目信息"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 更新字段
+    update_data = project_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(project, field, value)
+    await project.save()
+
+    # 重新获取成员列表
+    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
+    members = [m.user for m in memberships]
+
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "owner_id": project.owner_id,
+        "organization_id": project.organization_id,
+        "members": members,
+        "created_at": project.created_at.isoformat() if project.created_at else None,
+        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+    }
+
+
+@router.delete("/{project_id}")
+async def delete_project(
+        project_id: int,
+        current_user: User = Depends(get_current_user)
+):
+    """软删除项目"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 检查是否有未完成的任务
+    pending_tasks = await Task.filter(
+        project=project,
+        deleted_at__isnull=True
+    ).count()
+    if pending_tasks > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="该项目下还有未完成的任务"
+        )
+
+    # 软删除
+    project.deleted_at = datetime.utcnow()
+    await project.save()
+
+    return {"message": "项目已删除"}
+
+
+@router.get("/{project_id}/members", response_model=List[ProjectMemberResponse])
+async def get_project_members(
+        project_id: int,
+        current_user: User = Depends(get_current_user)
+):
+    """获取项目成员列表"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
+    return [m.user for m in memberships]
+
+
+@router.post("/{project_id}/members")
+async def add_project_member(
+        project_id: int,
+        user_id: int = Query(..., description="要添加的用户ID"),
+        current_user: User = Depends(get_current_user)
+):
+    """添加项目成员"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 检查用户是否存在
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 检查是否已是成员
+    existing = await ProjectMember.get_or_none(project=project, user=user)
+    if existing:
+        raise HTTPException(status_code=400, detail="用户已是项目成员")
+
+    # 添加成员
+    await ProjectMember.create(project=project, user=user)
+
+    return {"message": "成员添加成功"}
+
+
+@router.delete("/{project_id}/members/{user_id}")
+async def remove_project_member(
+        project_id: int,
+        user_id: int,
+        current_user: User = Depends(get_current_user)
+):
+    """移除项目成员"""
+    project = await get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    # 检查成员关系是否存在
+    membership = await ProjectMember.get_or_none(project=project, user_id=user_id)
+    if not membership:
+        raise HTTPException(status_code=404, detail="用户不是项目成员")
+
+    # 移除成员
+    await membership.delete()
+
+    return {"message": "成员已移除"}

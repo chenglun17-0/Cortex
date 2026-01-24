@@ -27,7 +27,7 @@ const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
     Low: 'blue',
   };
   return (
-    <Tag color={colors[priority] || 'default'} bordered={false} style={{ fontSize: '10px', lineHeight: '16px' }}>
+    <Tag color={colors[priority] || 'default'} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
       {priority}
     </Tag>
   );
@@ -178,9 +178,16 @@ export const TaskBoardPage: React.FC = () => {
                     <Space size={8}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color }} />
                       <span style={{ color: '#475569', fontSize: 15 }}>{col.title}</span>
-                      <Tag bordered={false} style={{ margin: 0, borderRadius: 10, background: '#e2e8f0', color: '#64748b', fontSize: 11 }}>
+                      <span style={{
+                        margin: 0,
+                        borderRadius: 10,
+                        background: '#e2e8f0',
+                        color: '#64748b',
+                        fontSize: 11,
+                        padding: '2px 6px',
+                      }}>
                         {tasksByStatus[col.id]?.length || 0}
-                      </Tag>
+                      </span>
                     </Space>
                   </div>
 
@@ -194,7 +201,7 @@ export const TaskBoardPage: React.FC = () => {
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             size="small"
-                            bordered={false}
+                            variant="borderless"
                             hoverable
                             onClick={() => handleTaskClick(task.id)}
                             style={{

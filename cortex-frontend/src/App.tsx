@@ -1,8 +1,5 @@
 import React from 'react'; // 确保引入 React
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './lib/react-query';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
@@ -27,37 +24,25 @@ const PrivateRoute = ({ children }: { children?: React.ReactNode }) => {
 // 主应用组件
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: '#6366f1',
-            borderRadius: 8,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-          },
-        }}
-      >
-        <BrowserRouter>
-          <Routes>
-            {/* 公开路由：登录页 */}
-            <Route path="/login" element={<LoginPage />} />
+    <BrowserRouter>
+      <Routes>
+        {/* 公开路由：登录页 */}
+        <Route path="/login" element={<LoginPage />} />
 
-            {/* 受保护路由组：使用 MainLayout 包装 */}
-            <Route element={<PrivateRoute />}>
-              <Route element={<MainLayout><Outlet /></MainLayout>}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:projectId" element={<KanbanBoard />} />
-                <Route path="/tasks" element={<TaskListPage />} />
-                <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
-                <Route path="/board" element={<TaskBoardPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-              </Route>
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ConfigProvider>
-    </QueryClientProvider>
+        {/* 受保护路由组：使用 MainLayout 包装 */}
+        <Route element={<PrivateRoute />}>
+          <Route element={<MainLayout><Outlet /></MainLayout>}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:projectId" element={<KanbanBoard />} />
+            <Route path="/tasks" element={<TaskListPage />} />
+            <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+            <Route path="/board" element={<TaskBoardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 

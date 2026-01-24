@@ -86,32 +86,32 @@ export const DashboardPage: React.FC = () => {
             {/* Stats Cards */}
             <Row gutter={24} style={{ marginBottom: 32 }}>
                 <Col span={8}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <Statistic 
-                            title="待处理任务" 
-                            value={pendingTasksCount} 
+                    <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <Statistic
+                            title="待处理任务"
+                            value={pendingTasksCount}
                             prefix={<ClockCircleOutlined style={{ color: '#f59e0b' }} />}
-                            valueStyle={{ color: '#1e293b', fontWeight: 600 }}
+                            styles={{ content: { color: '#1e293b', fontWeight: 600 } }}
                         />
                     </Card>
                 </Col>
                 <Col span={8}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <Statistic 
-                            title="参与项目" 
-                            value={projects.length} 
+                    <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <Statistic
+                            title="参与项目"
+                            value={projects.length}
                             prefix={<ProjectOutlined style={{ color: '#3b82f6' }} />}
-                            valueStyle={{ color: '#1e293b', fontWeight: 600 }}
+                            styles={{ content: { color: '#1e293b', fontWeight: 600 } }}
                         />
                     </Card>
                 </Col>
                 <Col span={8}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <Statistic 
-                            title="已完成任务" 
-                            value={completedTasksCount} 
+                    <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <Statistic
+                            title="已完成任务"
+                            value={completedTasksCount}
                             prefix={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-                            valueStyle={{ color: '#1e293b', fontWeight: 600 }}
+                            styles={{ content: { color: '#1e293b', fontWeight: 600 } }}
                         />
                     </Card>
                 </Col>
@@ -120,22 +120,22 @@ export const DashboardPage: React.FC = () => {
             {/* My Tasks List */}
             <Row gutter={24}>
                 <Col span={16}>
-                    <Card 
-                        title="我的任务" 
-                        bordered={false} 
+                    <Card
+                        title="我的任务"
+                        variant="borderless"
                         style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
                         extra={<Button type="link" onClick={() => navigate('/projects')}>查看所有项目</Button>}
                     >
                         <List
                             loading={tasksLoading}
-                            dataSource={myTasks.filter(t => t.status !== TaskStatus.DONE).slice(0, 5)} // Show only top 5 pending
+                            dataSource={myTasks.filter(t => t.status !== TaskStatus.DONE).slice(0, 5)}
                             locale={{ emptyText: <Empty description="暂无待办任务" /> }}
                             renderItem={(item) => (
                                 <List.Item
                                     actions={[
-                                        <Button 
-                                            type="text" 
-                                            size="small" 
+                                        <Button
+                                            type="text"
+                                            size="small"
                                             key="view"
                                             onClick={() => navigate(`/projects/${item.project_id}`)}
                                         >
@@ -145,10 +145,10 @@ export const DashboardPage: React.FC = () => {
                                 >
                                     <List.Item.Meta
                                         avatar={
-                                            <div style={{ 
-                                                width: 8, 
-                                                height: 8, 
-                                                borderRadius: '50%', 
+                                            <div style={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
                                                 backgroundColor: getPriorityColor(item.priority),
                                                 marginTop: 8
                                             }} />
@@ -157,11 +157,11 @@ export const DashboardPage: React.FC = () => {
                                         description={
                                             <Space size={0} split={<span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>}>
                                                 <Text type="secondary" style={{ fontSize: 12 }}>ID: #{item.id}</Text>
-                                                <Tag color={getStatusColor(item.status)} bordered={false} style={{ margin: 0 }}>
+                                                <Tag color={getStatusColor(item.status)} variant="filled" style={{ margin: 0 }}>
                                                     {getStatusText(item.status)}
                                                 </Tag>
                                                 {item.priority && (
-                                                    <Tag color={getPriorityColor(item.priority)} bordered={false} style={{ margin: 0 }}>
+                                                    <Tag color={getPriorityColor(item.priority)} variant="filled" style={{ margin: 0 }}>
                                                         {item.priority}
                                                     </Tag>
                                                 )}
@@ -173,19 +173,19 @@ export const DashboardPage: React.FC = () => {
                         />
                     </Card>
                 </Col>
-                
+
                 {/* Right Column: Recent Projects or Quick Actions (Placeholder) */}
                 <Col span={8}>
-                    <Card 
-                        title="最近项目" 
-                        bordered={false} 
+                    <Card
+                        title="最近项目"
+                        variant="borderless"
                         style={{ borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
                     >
                         <List
                             loading={projectsLoading}
                             dataSource={projects.slice(0, 5)}
                             renderItem={(item) => (
-                                <List.Item 
+                                <List.Item
                                     style={{ cursor: 'pointer', padding: '12px 0' }}
                                     onClick={() => navigate(`/projects/${item.id}`)}
                                 >

@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from app.core.security import get_password_hash, verify_password
 from app.models import User as UserModel
 from app.schemas.user import UserCreate, User, UserUpdateProfile
@@ -29,7 +30,7 @@ async def update_user_me(
         if not verify_password(user_in.old_password, current_user.hashed_password):
              raise HTTPException(status_code=400, detail="旧密码错误")
         current_user.hashed_password = get_password_hash(user_in.password)
-    
+
     if user_in.username:
         # Check if username already exists (excluding current user)
         if await UserModel.filter(username=user_in.username).exclude(id=current_user.id).exists():
@@ -51,3 +52,14 @@ async def create_user(user: UserCreate):
     user_obj = await UserModel.create(**user_dict)
 
     return user_obj
+
+@router.get("/search", response_model=List[User])
+async def search_users(
+    q: str = Query(..., min_length=1, description="搜索关键字"),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    按用户名搜索用户
+    """
+    users = await UserModel.filter(username__icontains=q).limit(20).all()
+    return users
