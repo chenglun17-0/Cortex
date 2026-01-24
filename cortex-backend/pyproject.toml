@@ -22,7 +22,8 @@ dependencies = [
     "python-multipart",
     "pyjwt",
     "passlib",
-    "bcrypt"
+    "bcrypt",
+    "python-dotenv"
 ]
 
 # 这里定义命令行入口
