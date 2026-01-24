@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -28,10 +29,10 @@ async def read_my_tasks(
         current_user: User = Depends(get_current_user)
 ):
     """
-    获取"分配给当前用户"的所有任务
+    获取"分配给当前用户"的所有任务（排除已软删除的）
     CLI 将调用此接口来显示可选任务列表
     """
-    tasks = await Task.filter(assignee=current_user).all()
+    tasks = await Task.filter(assignee=current_user, deleted_at__isnull=True).all()
     return tasks
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -40,9 +41,9 @@ async def get_task(
     current_user: User = Depends(get_current_user)
 ):
     """
-    获取单个任务详情
+    获取单个任务详情（已软删除的任务返回 404）
     """
-    task = await Task.get_or_none(id=task_id)
+    task = await Task.get_or_none(id=task_id, deleted_at__isnull=True)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
@@ -53,13 +54,30 @@ async def get_project_tasks(
     current_user: User = Depends(get_current_user)
 ):
     """
-    获取项目下所有任务
+    获取项目下所有任务（排除已软删除的）
     :param project_id:
     :param current_user:
     :return:
     """
-    tasks = await Task.filter(project_id=project_id).all()
+    tasks = await Task.filter(project_id=project_id, deleted_at__isnull=True).all()
     return tasks
+
+
+@router.delete("/{task_id}")
+async def delete_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    软删除任务（设置 deleted_at 为当前时间）
+    """
+    task = await Task.get_or_none(id=task_id, deleted_at__isnull=True)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.deleted_at = datetime.utcnow()
+    await task.save()
+    return {"message": "Task deleted successfully"}
 
 
 @router.patch("/{task_id}", response_model=TaskRead)

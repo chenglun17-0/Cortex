@@ -2,6 +2,11 @@ from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel
 
+
+def datetime_utc_now():
+    """返回当前 UTC 时间"""
+    return datetime.utcnow()
+
 # 基础字段
 class TaskBase(BaseModel):
     title: str
@@ -34,6 +39,7 @@ class TaskRead(TaskBase):
     assignee_id: Optional[int]
     created_at: datetime
     updated_at: datetime
+    deleted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -25,6 +25,7 @@ class Task(models.Model):
     # 时间戳
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)  # 每次保存自动更新
+    deleted_at = fields.DatetimeField(null=True)  # 软删除标记
 
     class Meta:
         table = "tasks"
