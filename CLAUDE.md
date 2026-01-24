@@ -31,6 +31,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **安全**：任何涉及数据库迁移、依赖升级、网络访问、Secrets，**必须先征求确认**并给出回滚方案。不要读取 `.env*`、`config/credentials*`、`secrets/**`。
 - **整洁原则** 每次因调试，测试，获取数据产生的临时性的脚本、文档、工具都必须生成在 tmp 文件夹下，并且在完成当前事项之前，必须将其删除，保证目录干净整洁没有多余的东西
 - 所有任务遵循 "Ask → Code"
+- **强制使用 ctx**：开始实施任何任务前，**必须**先执行 `ctx tasks start <任务ID>` 来启动任务，确保分支正确创建和绑定
 - 粒度：目标耗时 ≤ 1 小时；超出则先拆分
 - **目录规范** 根目录下不随意添加文件，文档优先生成在 docs 下，脚本优先生成在 scripts 下，如必须，则尽可能放在 tmp 目录下下
 - **一致性原则**：本项目长期维护，需要尽可能保持约定和规则的一致，包括但不限于各类技术栈、约定、行为描述、规则、依赖等。如出现与本文描述不一致的情况，先提示确认，确保降低不一致性的情况是已知的、可控的
@@ -153,25 +154,40 @@ openspec init --tools claude,cline
 # 支持的工具：amazon-q, antigravity, auggie, claude, cline, codex, continue, cursor, factory, gemini, github-copilot, opencode, windsurf 等
 ```
 
-## Cortex 任务管理命令 (ctx)
+## Cortex 任务管理命令 (ctx) ⚠️ 强制执行
 
-ctx 是 Cortex 项目的任务管理 CLI 工具。
+ctx 是 Cortex 项目的任务管理 CLI 工具。**所有任务开发必须遵循此流程：新建任务 -> 开始任务 -> PR -> 完成**
 
-### 任务开发流程 ⚠️ 强制执行
-
-开发新功能时，**必须**遵循以下流程：
+### 完整开发流程 ⚠️ 强制执行
 
 ```bash
-# 1. 创建任务（使用 CLI）
-# 2. 开始任务（自动生成分支、绑定任务、切换分支）
+# 1️⃣ 新建任务（通过 API 创建）
+ctx tasks new "任务标题" 2026-02-01 --type feature --priority medium --desc "任务描述"
+
+# 2️⃣ 开始任务（自动生成分支、绑定任务、切换分支）⚠️ 必须的第二步
 ctx tasks start <任务ID>
 
-# 3. 开发过程中可使用 git commit 提交代码
+# 3️⃣ 开发过程中可使用 git commit 提交代码
 
-# 4. 完成开发后提交任务（更新状态、Git Push、打开 PR）
+# 4️⃣ PR（更新状态、Git Push、打开 PR）⚠️ 必须的第三步
 ctx tasks pr
 
-# 5. PR 合并后完成任务（切换回主分支、更新状态、清理分支）
+# 5️⃣ 完成（切换回主分支、更新状态、清理分支）⚠️ 必须的第四步
+ctx tasks done
+```
+
+### 快速常用命令
+```bash
+# 查看任务列表
+ctx tasks list
+
+# 开始任务（自动生成分支）
+ctx tasks start <任务ID>
+
+# 提交任务并创建 PR
+ctx tasks pr
+
+# 完成任务
 ctx tasks done
 ```
 
