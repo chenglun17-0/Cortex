@@ -7,7 +7,10 @@ from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 from cli.api import client
-from cli.config import get_config_value, DELETE_LOCAL_ON_DONE, DELETE_REMOTE_ON_DONE
+from cli.config import (
+    get_config_value, DELETE_LOCAL_ON_DONE, DELETE_REMOTE_ON_DONE,
+    GIT_PROVIDER, GITHUB_TOKEN, GITLAB_TOKEN
+)
 from cli.git import (
     create_branch,
     ensure_git_repo,
@@ -22,6 +25,7 @@ from cli.git import (
     checkout_branch,
     git_pull, delete_local_branch
 )
+from cli.providers import get_provider
 
 app = typer.Typer()
 console = Console()
@@ -187,6 +191,42 @@ def start(task_id: int):
     except typer.Exit as e:
         console.print(str(e))
 
+def _get_git_provider():
+    """
+    获取 Git Provider 实例
+
+    从 git remote URL 自动识别并获取 Provider
+
+    Returns:
+        (provider, repo_url) 元组，如果配置不完整则返回 (None, None)
+    """
+    provider_type = get_config_value(GIT_PROVIDER)
+    remote_url = get_remote_url()
+
+    if not remote_url:
+        return None, None
+
+    # 从 remote URL 提取 repo 路径
+    from urllib.parse import urlparse
+    parsed = urlparse(remote_url)
+    repo_path = parsed.path.strip("/")
+
+    if provider_type == "github":
+        token = get_config_value(GITHUB_TOKEN)
+        if token:
+            provider = get_provider("github", token, f"https://github.com/{repo_path}")
+            return provider, f"https://github.com/{repo_path}"
+    elif provider_type == "gitlab":
+        token = get_config_value(GITLAB_TOKEN)
+        if token:
+            # GitLab 可能是自定义域名
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            provider = get_provider("gitlab", token, f"{base_url}/{repo_path}")
+            return provider, f"{base_url}/{repo_path}"
+
+    return None, None
+
+
 @app.command()
 def pr():
     """
@@ -194,7 +234,7 @@ def pr():
     1. 识别当前任务分支
     2. 更新状态 -> REVIEW
     3. Git Push
-    4. 打开 PR 链接
+    4. 创建 PR/MR 并打开链接
     """
     api = client()
     ensure_git_repo()
@@ -238,7 +278,6 @@ def pr():
 
     if patch_resp.status_code != 200:
         console.print(f"[red]Failed to update task status: {patch_resp.text}[/red]")
-        # 这里不退出，因为即使 API 失败，用户可能还是想 push 代码
     else:
         console.print(f"[green]✔ Task status updated to REVIEW[/green]")
 
@@ -250,18 +289,51 @@ def pr():
         console.print(f"[red]Git push failed: {e}[/red]")
         raise typer.Exit(1)
 
-    # 5. 生成并打开 PR 链接 (以 GitHub 为例)
-    remote_url = get_remote_url()
-    if remote_url:
-        # GitHub PR 快速创建链接格式
-        pr_url = f"{remote_url}/compare/{branch_name}?expand=1"
-        console.print(f"\n[bold yellow]🔗 Create Pull Request:[/bold yellow] {pr_url}")
+    # 5. 创建 PR/MR
+    provider, repo_url = _get_git_provider()
 
-        # 询问是否自动打开浏览器
-        if typer.confirm("Open in browser?", default=True):
-            webbrowser.open(pr_url)
+    if provider:
+        target_branch = get_main_branch()
+        try:
+            # 获取任务信息作为 PR 标题
+            task_resp = api.get(f"/tasks/{task_id}")
+            task = task_resp.json() if task_resp.status_code == 200 else {}
+            title = task.get("title", f"Task #{task_id}")
+
+            is_gitlab = 'gitlab' in repo_url
+            console.print(f"[cyan]Creating {'Merge Request' if is_gitlab else 'Pull Request'}...[/cyan]")
+
+            pr_info = provider.create_pull_request(
+                title=title,
+                source_branch=branch_name,
+                target_branch=target_branch,
+                description=f"Task #{task_id}\n\n{task.get('description', '')}"
+            )
+
+            console.print(f"[green]✔ {'MR' if is_gitlab else 'PR'} created successfully![/green]")
+            console.print(f"[bold cyan]🔗 {'MR' if is_gitlab else 'PR'} URL:[/bold cyan] {pr_info.url}")
+
+            # 询问是否自动打开浏览器
+            if typer.confirm("Open in browser?", default=True):
+                webbrowser.open(pr_info.url)
+
+        except RuntimeError as e:
+            console.print(f"[yellow]⚠️  {str(e)}[/yellow]")
+            console.print("[blue]ℹ️  Falling back to browser link...[/blue]")
+            pr_url = f"{repo_url}/compare/{branch_name}?expand=1"
+            console.print(f"[bold yellow]🔗 Create PR:[/bold yellow] {pr_url}")
+            if typer.confirm("Open in browser?", default=True):
+                webbrowser.open(pr_url)
     else:
-        console.print("[yellow]Could not detect remote URL. Please open PR manually.[/yellow]")
+        # 回退到原有的浏览器链接方式
+        remote_url = get_remote_url()
+        if remote_url:
+            pr_url = f"{remote_url}/compare/{branch_name}?expand=1"
+            console.print(f"\n[bold yellow]🔗 Create Pull Request:[/bold yellow] {pr_url}")
+            if typer.confirm("Open in browser?", default=True):
+                webbrowser.open(pr_url)
+        else:
+            console.print("[yellow]Could not detect remote URL. Please open PR manually.[/yellow]")
 
 @app.command()
 def done():

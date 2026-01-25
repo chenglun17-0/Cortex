@@ -35,6 +35,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - 粒度：目标耗时 ≤ 1 小时；超出则先拆分
 - **目录规范** 根目录下不随意添加文件，文档优先生成在 docs 下，脚本优先生成在 scripts 下，如必须，则尽可能放在 tmp 目录下下
 - **一致性原则**：本项目长期维护，需要尽可能保持约定和规则的一致，包括但不限于各类技术栈、约定、行为描述、规则、依赖等。如出现与本文描述不一致的情况，先提示确认，确保降低不一致性的情况是已知的、可控的
+- **包管理**：后端使用 uv 管理 Python 依赖，所有包管理操作必须在 cortex-backend 目录下执行
 
 ## 快速启动命令
 
@@ -232,12 +233,11 @@ ctx config set <键> <值>
 cd cortex-backend
 
 # 生成新迁移（模型变更后）
-source .venv/bin/activate
-aerich migrate
+uv run aerich migrate
 
 # 应用所有迁移
-aerich upgrade
+uv run aerich upgrade
 
 # 回滚迁移
-aerich downgrade
+uv run aerich downgrade
 ```
