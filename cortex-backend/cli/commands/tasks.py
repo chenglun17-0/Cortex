@@ -27,7 +27,9 @@ from cli.git import (
     get_diff_for_ai
 )
 from cli.providers import get_provider
-from cli.ai import generate_commit_message, generate_pr_description
+from cli.providers.pr_comment import get_pr_comment_provider, ReviewComment
+from cli.ai import generate_commit_message, generate_pr_description, review_code
+from cli.config import AI_REVIEW_ENABLED
 
 app = typer.Typer()
 console = Console()
@@ -349,6 +351,9 @@ def pr(use_ai: bool = typer.Option(True, "--ai/--no-ai", help="是否使用 AI �
             console.print(f"[green]✔ {'MR' if is_gitlab else 'PR'} created successfully![/green]")
             console.print(f"[bold cyan]🔗 {'MR' if is_gitlab else 'PR'} URL:[/bold cyan] {pr_info.url}")
 
+            # 6. AI 代码审查并发布到 PR 评论区
+            _publish_review_to_pr(pr_info.number, diff_for_ai if diff_for_ai else get_diff_for_ai())
+
             # 询问是否自动打开浏览器
             if typer.confirm("Open in browser?", default=True):
                 webbrowser.open(pr_info.url)
@@ -435,3 +440,95 @@ def generate_random_branch_name(task_id: int, branch_type: str = "feature") -> s
     """
     random_suffix = secrets.token_hex(4)
     return f"{branch_type}/task-{task_id}-{random_suffix}"
+
+
+def _publish_review_to_pr(pr_number: int, diff: str):
+    """将 AI 审查结果发布到 PR 评论区"""
+    # 检查是否启用 AI 审查
+    review_enabled = get_config_value(AI_REVIEW_ENABLED, default=True)
+    if not review_enabled:
+        return
+
+    if not diff:
+        return
+
+    provider_type = get_config_value(GIT_PROVIDER)
+    if not provider_type:
+        return
+
+    remote_url = get_remote_url()
+    if not remote_url:
+        return
+
+    # 获取 token
+    if provider_type == "github":
+        token = get_config_value(GITHUB_TOKEN)
+    elif provider_type == "gitee":
+        token = get_config_value(GITLAB_TOKEN)
+    else:
+        return
+
+    if not token:
+        return
+
+    try:
+        # 执行代码审查
+        result = review_code(diff)
+
+        # 获取 PR Comment Provider
+        comment_provider = get_pr_comment_provider(provider_type, token, remote_url)
+
+        # 创建审查结果摘要评论
+        body = _format_review_for_pr(result)
+        comment_provider.create_review_comment(pr_number, body)
+
+        # 批量创建详细问题评论
+        comments = []
+        for issue in result.issues:
+            comment = ReviewComment(
+                path=issue.file,
+                line=issue.line,
+                body=f"**[{issue.category}]** {issue.message}\n\n建议: {issue.suggestion or '无'}",
+                severity=issue.severity
+            )
+            comments.append(comment)
+
+        if comments:
+            comment_ids = comment_provider.create_review_comments_batch(pr_number, comments)
+            console.print(f"[green]✅ 已发布 {len(comment_ids)} 条审查评论到 PR #{pr_number}[/green]")
+
+    except Exception as e:
+        console.print(f"[yellow]⚠️  AI 审查发布失败: {e}[/yellow]")
+
+
+def _format_review_for_pr(result) -> str:
+    """格式化审查结果为 Markdown 评论"""
+    lines = [
+        "## AI 代码审查结果",
+        "",
+        f"**评分**: {result.score}/100",
+        "",
+        f"**摘要**: {result.summary}",
+        "",
+        "---",
+    ]
+
+    if result.issues:
+        lines.extend(["", "### 审查详情", ""])
+
+        # 按 severity 分组
+        severity_order = {"error": 0, "warning": 1, "info": 2}
+        grouped = {}
+        for issue in result.issues:
+            key = severity_order.get(issue.severity, 3)
+            if key not in grouped:
+                grouped[key] = []
+            grouped[key].append(issue)
+
+        for key in sorted(grouped.keys()):
+            severity = {0: "🔴 错误", 1: "🟡 警告", 2: "🔵 信息"}.get(key, "⚪ 其他")
+            lines.append(f"#### {severity} ({len(grouped[key])} 项)")
+            for issue in grouped[key]:
+                lines.append(f"- **{issue.file}:{issue.line}** - {issue.message}")
+
+    return "\n".join(lines)
