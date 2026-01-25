@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Table, Tag, Button, Space, Input, Select, Card, Breadcrumb } from 'antd';
 import { SearchOutlined, EyeOutlined, BorderlessTableOutlined } from '@ant-design/icons';
@@ -7,23 +7,11 @@ import { getMyTasks } from './service';
 import { getProjects } from '../projects/service';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
-import { TaskStatus } from '../../types';
+import { TaskStatus, PaginationConfig } from '../../constants';
+import { getStatusConfig, getPriorityConfig } from '../../utils';
 
 const { Title } = Typography;
 const { Option } = Select;
-
-const statusMap: Record<string, { text: string; color: string }> = {
-  TODO: { text: '待处理', color: 'default' },
-  IN_PROGRESS: { text: '进行中', color: 'processing' },
-  REVIEW: { text: '待审核', color: 'warning' },
-  DONE: { text: '已完成', color: 'success' },
-};
-
-const priorityMap: Record<string, { text: string; color: string }> = {
-  HIGH: { text: '高', color: 'red' },
-  MEDIUM: { text: '中', color: 'orange' },
-  LOW: { text: '低', color: 'blue' },
-};
 
 export const TaskListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -91,8 +79,8 @@ export const TaskListPage: React.FC = () => {
       key: 'status',
       width: 120,
       render: (status: TaskStatus) => {
-        const { text, color } = statusMap[status] || { text: status, color: 'default' };
-        return <Tag color={color}>{text}</Tag>;
+        const config = getStatusConfig(status);
+        return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
@@ -101,8 +89,8 @@ export const TaskListPage: React.FC = () => {
       key: 'priority',
       width: 100,
       render: (priority: string) => {
-        const { text, color } = priorityMap[priority] || { text: priority || '中', color: 'default' };
-        return <Tag color={color}>{text}</Tag>;
+        const config = getPriorityConfig(priority);
+        return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
@@ -207,9 +195,9 @@ export const TaskListPage: React.FC = () => {
         rowKey="id"
         loading={isLoading}
         pagination={{
-          pageSize: 20,
+          pageSize: PaginationConfig.pageSize,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`,
+          showTotal: PaginationConfig.showTotal,
         }}
         style={{ background: '#fff', borderRadius: 8 }}
       />

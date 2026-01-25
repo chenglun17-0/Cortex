@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Typography,
@@ -27,23 +27,11 @@ import { getTaskById, updateTask } from './service';
 import { getProjects } from '../projects/service';
 import type { Project } from '../../types';
 import { TaskStatus } from '../../types';
+import { getStatusConfig, getPriorityConfig, formatDateTime } from '../../utils';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
-
-const statusMap: Record<string, { text: string; color: string }> = {
-  TODO: { text: '待处理', color: 'default' },
-  IN_PROGRESS: { text: '进行中', color: 'processing' },
-  REVIEW: { text: '待审核', color: 'warning' },
-  DONE: { text: '已完成', color: 'success' },
-};
-
-const priorityMap: Record<string, { text: string; color: string }> = {
-  HIGH: { text: '高', color: 'red' },
-  MEDIUM: { text: '中', color: 'orange' },
-  LOW: { text: '低', color: 'blue' },
-};
 
 export const TaskDetailPage: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -137,8 +125,8 @@ export const TaskDetailPage: React.FC = () => {
     );
   }
 
-  const statusInfo = statusMap[task.status] || { text: task.status, color: 'default' };
-  const priorityInfo = priorityMap[task.priority || 'MEDIUM'] || { text: task.priority || '中', color: 'default' };
+  const statusInfo = getStatusConfig(task.status);
+  const priorityInfo = getPriorityConfig(task.priority);
 
   return (
     <div>
@@ -244,10 +232,10 @@ export const TaskDetailPage: React.FC = () => {
             </Descriptions.Item>
           )}
           <Descriptions.Item label="创建时间" span={2}>
-            {task.created_at ? new Date(task.created_at).toLocaleString('zh-CN') : '-'}
+            {formatDateTime(task.created_at)}
           </Descriptions.Item>
           <Descriptions.Item label="更新时间" span={2}>
-            {task.updated_at ? new Date(task.updated_at).toLocaleString('zh-CN') : '-'}
+            {formatDateTime(task.updated_at)}
           </Descriptions.Item>
           <Descriptions.Item label="任务描述" span={2}>
             <Text style={{ whiteSpace: 'pre-wrap' }}>

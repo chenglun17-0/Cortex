@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Card, Spin, Tag, Select, Space, Breadcrumb } from 'antd';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -7,28 +7,18 @@ import { getMyTasks, updateTask } from './service';
 import { getProjects } from '../projects/service';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
-import { TaskStatus } from '../../types';
+import { TaskStatus, KanbanColumns } from '../../constants';
+import { getPriorityConfig } from '../../utils';
 
 const { Title } = Typography;
 const { Option } = Select;
 
-// 定义看板的列结构
-const COLUMNS = [
-  { id: TaskStatus.TODO, title: '待处理', color: '#64748b' },
-  { id: TaskStatus.IN_PROGRESS, title: '进行中', color: '#3b82f6' },
-  { id: TaskStatus.REVIEW, title: '待审核', color: '#f59e0b' },
-  { id: TaskStatus.DONE, title: '已完成', color: '#10b981' },
-];
-
-const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
-  const colors: Record<string, string> = {
-    High: 'red',
-    Medium: 'orange',
-    Low: 'blue',
-  };
+// PriorityTag 组件 - 使用统一的优先级配置
+const PriorityTag: React.FC<{ priority?: string }> = ({ priority }) => {
+  const config = getPriorityConfig(priority);
   return (
-    <Tag color={colors[priority] || 'default'} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
-      {priority}
+    <Tag color={config.color} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
+      {config.text}
     </Tag>
   );
 };
@@ -154,7 +144,7 @@ export const TaskBoardPage: React.FC = () => {
       {/* 拖拽上下文 */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 16, flex: 1 }}>
-          {COLUMNS.map((col) => (
+          {KanbanColumns.map((col) => (
             <Droppable key={col.id} droppableId={col.id}>
               {(provided, snapshot) => (
                 <div

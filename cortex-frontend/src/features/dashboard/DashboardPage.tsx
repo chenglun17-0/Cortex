@@ -1,10 +1,9 @@
-import React from 'react';
 import { Typography, Card, List, Statistic, Row, Col, Tag, Button, Empty, Space } from 'antd';
-import { 
-    CheckCircleOutlined, 
-    ProjectOutlined, 
-    RightOutlined, 
-    ClockCircleOutlined 
+import {
+    CheckCircleOutlined,
+    ProjectOutlined,
+    RightOutlined,
+    ClockCircleOutlined
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +11,7 @@ import { getMyTasks } from '../tasks/service';
 import { getProjects } from '../projects/service';
 import { getCurrentUser } from '../auth/service';
 import { TaskStatus } from '../../types';
+import { getStatusConfig, getPriorityConfig } from '../../utils';
 
 const { Title, Text } = Typography;
 
@@ -39,37 +39,6 @@ export const DashboardPage: React.FC = () => {
     // Calculate stats
     const pendingTasksCount = myTasks.filter(t => t.status !== TaskStatus.DONE).length;
     const completedTasksCount = myTasks.filter(t => t.status === TaskStatus.DONE).length;
-    
-    // Priority colors helper
-    const getPriorityColor = (priority?: string) => {
-        switch (priority) {
-            case 'High': return 'red';
-            case 'Medium': return 'orange';
-            case 'Low': return 'blue';
-            default: return 'default';
-        }
-    };
-
-    // Status colors helper
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case TaskStatus.TODO: return 'default';
-            case TaskStatus.IN_PROGRESS: return 'processing';
-            case TaskStatus.REVIEW: return 'warning';
-            case TaskStatus.DONE: return 'success';
-            default: return 'default';
-        }
-    };
-
-    const getStatusText = (status: string) => {
-        switch (status) {
-            case TaskStatus.TODO: return '待处理';
-            case TaskStatus.IN_PROGRESS: return '进行中';
-            case TaskStatus.REVIEW: return '待审核';
-            case TaskStatus.DONE: return '已完成';
-            default: return status;
-        }
-    };
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -149,7 +118,7 @@ export const DashboardPage: React.FC = () => {
                                                 width: 8,
                                                 height: 8,
                                                 borderRadius: '50%',
-                                                backgroundColor: getPriorityColor(item.priority),
+                                                backgroundColor: getPriorityConfig(item.priority).color,
                                                 marginTop: 8
                                             }} />
                                         }
@@ -157,12 +126,12 @@ export const DashboardPage: React.FC = () => {
                                         description={
                                             <Space size={0} split={<span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>}>
                                                 <Text type="secondary" style={{ fontSize: 12 }}>ID: #{item.id}</Text>
-                                                <Tag color={getStatusColor(item.status)} variant="filled" style={{ margin: 0 }}>
-                                                    {getStatusText(item.status)}
+                                                <Tag color={getStatusConfig(item.status).color} variant="filled" style={{ margin: 0 }}>
+                                                    {getStatusConfig(item.status).text}
                                                 </Tag>
                                                 {item.priority && (
-                                                    <Tag color={getPriorityColor(item.priority)} variant="filled" style={{ margin: 0 }}>
-                                                        {item.priority}
+                                                    <Tag color={getPriorityConfig(item.priority).color} variant="filled" style={{ margin: 0 }}>
+                                                        {getPriorityConfig(item.priority).text}
                                                     </Tag>
                                                 )}
                                             </Space>
