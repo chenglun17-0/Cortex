@@ -144,7 +144,19 @@ class AnthropicService(AIService):
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        return response.content[0].text if response.content else ""
+
+        # 处理不同类型的 content（TextBlock, ThinkingBlock 等）
+        if not response.content:
+            return ""
+
+        for block in response.content:
+            # TextBlock 有 text 属性
+            if hasattr(block, 'text') and block.text:
+                return block.text
+            # ThinkingBlock 有 thinking 属性（跳过）
+            # 其他类型跳过
+
+        return ""
 
     def generate_commit_message(self, diff: str, task_title: str) -> str:
         user_prompt = COMMIT_MESSAGE_PROMPT.format(diff=diff, task_title=task_title)
