@@ -19,8 +19,18 @@ async def create_task(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2. 创建任务
-    task = await Task.create(**task_in.dict())
+    # 2. 创建任务，自动将当前用户设为 assignee（如果未指定）
+    assignee_id = task_in.assignee_id or current_user.id
+    task = await Task.create(
+        title=task_in.title,
+        description=task_in.description,
+        type=task_in.type,
+        priority=task_in.priority,
+        status=task_in.status,
+        deadline=task_in.deadline,
+        project=project,
+        assignee_id=assignee_id
+    )
     return task
 
 
