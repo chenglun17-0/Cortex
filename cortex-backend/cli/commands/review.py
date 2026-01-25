@@ -184,18 +184,18 @@ def _format_review_comment(result) -> str:
     return "\n".join(lines)
 
 
-@app.command()
-def review_config(
+@app.command(name="status")
+def review_status(
     enable: Optional[bool] = typer.Option(None, "--enable/--disable", help="启用/禁用 AI 代码审查"),
     show: bool = typer.Option(False, "--show", help="显示当前配置"),
 ):
     """
-    配置 AI 代码审查设置
+    查看/配置 AI 代码审查设置
 
     示例:
-        ctx review-config --show          # 显示当前配置
-        ctx review-config --enable        # 启用 AI 审查
-        ctx review-config --disable       # 禁用 AI 审查
+        ctx review status --show          # 显示当前配置
+        ctx review status --enable        # 启用 AI 审查
+        ctx review status --disable       # 禁用 AI 审查
     """
     if show:
         enabled = get_config_value(AI_REVIEW_ENABLED, default=False)
