@@ -210,26 +210,29 @@ def _publish_to_pr(pr_number: int, result):
     try:
         comment_provider = get_pr_comment_provider(provider_type, token, remote_url)
 
-        # 构建审查结果评论
+        # 构建审查结果摘要评论
         body = _format_review_comment(result)
 
-        # 批量创建评论
-        comments = []
-        for issue in result.issues:
-            comment = ReviewComment(
-                path=issue.file,
-                line=issue.line,
-                body=f"**[{issue.category}]** {issue.message}\n\n建议: {issue.suggestion or '无'}",
-                severity=issue.severity
-            )
-            comments.append(comment)
-
-        comment_ids = comment_provider.create_review_comments_batch(pr_number, comments)
-
         # 创建摘要评论
-        comment_provider.create_review_comment(pr_number, body)
+        summary_id = comment_provider.create_review_comment(pr_number, body)
+        console.print(f"[green]✅ 已发布审查摘要到 PR #{pr_number}[/green]")
 
-        console.print(f"[green]✅ 已发布 {len(comment_ids)} 条审查评论到 PR #{pr_number}[/green]")
+        # 批量创建详细问题评论
+        if result.issues:
+            comments = []
+            for issue in result.issues:
+                comment = ReviewComment(
+                    path=issue.file,
+                    line=issue.line,
+                    body=f"**[{issue.category}]** {issue.message}\n\n建议: {issue.suggestion or '无'}",
+                    severity=issue.severity
+                )
+                comments.append(comment)
+
+            comment_ids = comment_provider.create_review_comments_batch(pr_number, comments)
+            console.print(f"[green]✅ 已发布 {len(comment_ids)} 条详细审查评论到 PR #{pr_number}[/green]")
+        else:
+            console.print("[yellow]⚠️  没有发现代码问题，无需发布详细评论[/yellow]")
 
     except Exception as e:
         console.print(f"[red]⚠️  发布失败: {e}[/red]")
