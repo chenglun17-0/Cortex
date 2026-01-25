@@ -60,8 +60,8 @@ def _get_pr_from_branch(branch_name: str, provider) -> Optional[int]:
     return None
 
 
-@app.command(name="review")
-def ai_review(
+@app.command("run")
+def review(
     publish: bool = typer.Option(False, "--publish", "-p", help="将审查结果发布到 PR 评论区"),
 ):
     """
@@ -71,8 +71,8 @@ def ai_review(
         --publish/-p: 将审查结果发布到 PR 评论区
 
     示例:
-        ctx review               # 只审查当前分支
-        ctx review --publish     # 审查并发布到 PR 评论区
+        ctx review run           # 只审查当前分支
+        ctx review run --publish # 审查并发布到 PR 评论区
     """
     ensure_git_repo()
 
