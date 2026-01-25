@@ -129,17 +129,37 @@ def get_diff() -> str:
     """获取已暂存的变更的 diff"""
     return run_git_command(["diff", "--staged"])
 
-def get_diff_for_ai(max_length: int = 8000) -> str:
+def get_branch_diff(branch: str, base_branch: str = "main") -> str:
+    """
+    获取两个分支之间的 diff
+
+    Args:
+        branch: 源分支名（当前分支）
+        base_branch: 目标分支名（主分支）
+
+    Returns:
+        diff 字符串
+    """
+    return run_git_command(["diff", f"{base_branch}...{branch}"])
+
+def get_diff_for_ai(max_length: int = 8000, use_staged: bool = True) -> str:
     """
     获取用于 AI 分析的 diff（已过滤敏感信息并截断）
 
     Args:
         max_length: 最大返回长度
+        use_staged: 是否使用暂存的变更，否则使用当前分支与主分支的差异
 
     Returns:
         过滤和截断后的 diff 字符串
     """
-    diff = get_diff()
+    if use_staged:
+        diff = get_diff()
+    else:
+        from cli.git import get_current_branch, get_main_branch
+        current = get_current_branch()
+        main = get_main_branch()
+        diff = get_branch_diff(current, main)
 
     if not diff:
         return ""
@@ -148,14 +168,14 @@ def get_diff_for_ai(max_length: int = 8000) -> str:
     import re
     # 过滤常见的敏感信息模式
     patterns = [
-        r'(token|key|secret|password|auth|credential)[^\s=]*[\s=]*[^\s\'"]+',
-        r'Bearer\s+[^\s\'"]+',
-        r'gh[puro]_[^\s\'"]+',
-        r'gitlab-token[^\s\'"]+',
-        r'AI_API_KEY.*',
+        (r'(token|key|secret|password|auth|credential)[^\s=]*[\s=]*[^\s\'"]+', r'\1=[FILTERED]'),
+        (r'Bearer\s+[^\s\'"]+', 'Bearer [FILTERED]'),
+        (r'gh[puro]_[^\s\'"]+', 'gh[puro]_[FILTERED]'),
+        (r'gitlab-token[^\s\'"]+', 'gitlab-token=[FILTERED]'),
+        (r'AI_API_KEY.*', 'AI_API_KEY=[FILTERED]'),
     ]
-    for pattern in patterns:
-        diff = re.sub(pattern, r'\1=[FILTERED]', diff, flags=re.IGNORECASE)
+    for pattern, repl in patterns:
+        diff = re.sub(pattern, repl, diff, flags=re.IGNORECASE)
 
     # 截断过长的 diff
     if len(diff) > max_length:

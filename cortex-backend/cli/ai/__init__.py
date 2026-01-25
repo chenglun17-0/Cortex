@@ -7,6 +7,14 @@ from cli.ai.service import (
     LocalModelService,
     get_ai_service,
 )
+from cli.ai.code_reviewer import (
+    CodeReviewer,
+    AICodeReviewer,
+    CodeIssue,
+    CodeReviewResult,
+    review_code,
+    get_code_reviewer,
+)
 
 __all__ = [
     "generate_commit_message",
@@ -16,4 +24,10 @@ __all__ = [
     "AnthropicService",
     "LocalModelService",
     "get_ai_service",
+    "CodeReviewer",
+    "AICodeReviewer",
+    "CodeIssue",
+    "CodeReviewResult",
+    "review_code",
+    "get_code_reviewer",
 ]

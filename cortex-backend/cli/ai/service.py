@@ -140,11 +140,23 @@ class AnthropicService(AIService):
         """调用 LLM"""
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=500,
+            max_tokens=4096,  # 增加 token 限制
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        return response.content[0].text if response.content else ""
+
+        # 处理不同类型的 content（TextBlock, ThinkingBlock 等）
+        if not response.content:
+            return ""
+
+        for block in response.content:
+            # TextBlock 有 text 属性
+            if hasattr(block, 'text') and block.text:
+                return block.text
+            # ThinkingBlock 有 thinking 属性（跳过）
+            # 其他类型跳过
+
+        return ""
 
     def generate_commit_message(self, diff: str, task_title: str) -> str:
         user_prompt = COMMIT_MESSAGE_PROMPT.format(diff=diff, task_title=task_title)
@@ -249,6 +261,10 @@ def get_ai_service(provider: Optional[str] = None) -> Optional[AIService]:
     base_url = get_config_value(AI_BASE_URL)
 
     provider = provider.lower()
+
+    # 如果 provider 是 anthropic 且 base_url 包含 minimaxi，使用 AnthropicService
+    if provider == "anthropic" and base_url:
+        return AnthropicService(api_key=api_key, model=model or "MiniMax-M2.1", base_url=base_url)
 
     if provider == "openai":
         return OpenAIService(api_key=api_key, model=model or "gpt-4o", base_url=base_url)
