@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Union, Any
 
 import jwt
@@ -19,7 +19,7 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(subject: Union[str, Any]) -> str:
     """生成 JWT 访问令牌"""
-    expire = datetime.utcnow() + timedelta(minutes=config.ACCESS__TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=config.ACCESS__TOKEN_EXPIRE_MINUTES)
     # subject 一般存放用户 id
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, config.SECRET_KEY, algorithm=config.ALGORITHM)

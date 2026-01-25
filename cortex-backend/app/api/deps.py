@@ -1,8 +1,7 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt import PyJWTError
-import jwt
+from jwt import PyJWTError, decode as jwt_decode
 from app.core import config, security
 from app.models import User
 
@@ -17,7 +16,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Use
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(
+        payload = jwt_decode(
             token, config.SECRET_KEY, algorithms=[config.ALGORITHM]
         )
         # Token 的 sub 字段存的是 User ID

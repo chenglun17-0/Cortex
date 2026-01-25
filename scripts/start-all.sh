@@ -50,6 +50,10 @@ fi
 
 # 激活虚拟环境并启动后端
 source .venv/bin/activate
+
+# 加载 .env 文件中的环境变量
+export $(grep -v '^#' .env | xargs)
+
 nohup uvicorn app.main:app --reload > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 deactivate

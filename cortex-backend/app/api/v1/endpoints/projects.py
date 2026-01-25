@@ -16,6 +16,26 @@ async def get_project_by_id(project_id: int) -> Optional[Project]:
     return project
 
 
+async def _get_project_members(project: Project) -> list:
+    """获取项目的成员列表（内部函数）"""
+    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
+    return [m.user for m in memberships]
+
+
+def format_project_response(project: Project, members: list) -> dict:
+    """格式化项目返回数据"""
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "owner_id": project.owner_id,
+        "organization_id": project.organization_id,
+        "members": members,
+        "created_at": project.created_at.isoformat() if project.created_at else None,
+        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+    }
+
+
 @router.post("/", response_model=ProjectRead)
 async def create_project(
         project_in: ProjectCreate,
@@ -60,19 +80,8 @@ async def read_my_projects(
     # 格式化返回数据
     result = []
     for project in projects:
-        memberships = await ProjectMember.filter(project=project).prefetch_related("user")
-        members = [m.user for m in memberships]
-
-        result.append({
-            "id": project.id,
-            "name": project.name,
-            "description": project.description,
-            "owner_id": project.owner_id,
-            "organization_id": project.organization_id,
-            "members": members,
-            "created_at": project.created_at.isoformat() if project.created_at else None,
-            "updated_at": project.updated_at.isoformat() if project.updated_at else None,
-        })
+        members = await _get_project_members(project)
+        result.append(format_project_response(project, members))
 
     return result
 
@@ -87,21 +96,8 @@ async def read_project(
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
 
-    # 获取成员列表
-    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
-    members = [m.user for m in memberships]
-
-    # 构建返回数据
-    return {
-        "id": project.id,
-        "name": project.name,
-        "description": project.description,
-        "owner_id": project.owner_id,
-        "organization_id": project.organization_id,
-        "members": members,
-        "created_at": project.created_at.isoformat() if project.created_at else None,
-        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
-    }
+    members = await _get_project_members(project)
+    return format_project_response(project, members)
 
 
 @router.patch("/{project_id}", response_model=ProjectRead)
@@ -121,20 +117,8 @@ async def update_project(
         setattr(project, field, value)
     await project.save()
 
-    # 重新获取成员列表
-    memberships = await ProjectMember.filter(project=project).prefetch_related("user")
-    members = [m.user for m in memberships]
-
-    return {
-        "id": project.id,
-        "name": project.name,
-        "description": project.description,
-        "owner_id": project.owner_id,
-        "organization_id": project.organization_id,
-        "members": members,
-        "created_at": project.created_at.isoformat() if project.created_at else None,
-        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
-    }
+    members = await _get_project_members(project)
+    return format_project_response(project, members)
 
 
 @router.delete("/{project_id}")

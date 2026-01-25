@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,7 +26,7 @@ async def login_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Dep
 
     # 生成 Token (将用户 ID 放入 Token)
     access_token = security.create_access_token(subject=user.id)
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
     await user.save()
     return Token(
         access_token=access_token,
