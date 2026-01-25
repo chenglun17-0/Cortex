@@ -48,11 +48,16 @@ def _get_pr_from_branch(branch_name: str, provider) -> Optional[int]:
         path = parsed.path.strip("/")  # owner/repo
         owner = path.split("/")[0]
 
+        # 先初始化 repo（会触发认证）
+        repo = provider._get_repo()
+
         # 使用 head 参数查询
-        prs = provider._repo.get_pulls(state="open", head=f"{owner}:{branch_name}")
+        prs = repo.get_pulls(state="open", head=f"{owner}:{branch_name}")
         for pr in prs:
             if pr.head.ref == branch_name:
                 return pr.number
+    except AttributeError as e:
+        console.print(f"[yellow]⚠️  GitHub 初始化失败，请检查 Token 配置[/yellow]")
     except Exception as e:
         console.print(f"[yellow]⚠️  查询 PR 失败: {e}[/yellow]")
 
