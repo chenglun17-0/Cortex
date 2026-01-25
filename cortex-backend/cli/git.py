@@ -124,3 +124,41 @@ def stage_all_changes():
 def commit_changes(message: str):
     """执行git commit -m <message>"""
     run_git_command(["commit", "-m", message])
+
+def get_diff() -> str:
+    """获取已暂存的变更的 diff"""
+    return run_git_command(["diff", "--staged"])
+
+def get_diff_for_ai(max_length: int = 8000) -> str:
+    """
+    获取用于 AI 分析的 diff（已过滤敏感信息并截断）
+
+    Args:
+        max_length: 最大返回长度
+
+    Returns:
+        过滤和截断后的 diff 字符串
+    """
+    diff = get_diff()
+
+    if not diff:
+        return ""
+
+    # 过滤敏感信息（token、密钥等）
+    import re
+    # 过滤常见的敏感信息模式
+    patterns = [
+        r'(token|key|secret|password|auth|credential)[^\s=]*[\s=]*[^\s\'"]+',
+        r'Bearer\s+[^\s\'"]+',
+        r'gh[puro]_[^\s\'"]+',
+        r'gitlab-token[^\s\'"]+',
+        r'AI_API_KEY.*',
+    ]
+    for pattern in patterns:
+        diff = re.sub(pattern, r'\1=[FILTERED]', diff, flags=re.IGNORECASE)
+
+    # 截断过长的 diff
+    if len(diff) > max_length:
+        diff = diff[:max_length] + "\n\n... (diff truncated for AI processing)"
+
+    return diff

@@ -82,11 +82,19 @@ JWT 认证系统：完整的用户认证和授权机制
 #### tasks
 - list    列出分配给当前用户的任务
 - start   开始任务:1. 检查/生成随机分支名并绑定到任务 2. 更新状态为 IN_PROGRESS 3. 切换 Git 分支
-- pr      提交任务:1. 识别当前任务分支  2. 更新状态 -> REVIEW 3. Git Push 4. 打开 PR 链接
+- pr      提交任务:1. 识别当前任务分支  2. AI 生成 Commit Message (可选) 3. 更新状态 -> REVIEW 4. Git Push 5. AI 生成 PR 描述 6. 创建 PR/MR
 - done    完成任务 (远程已合并):1. 切换回 Main 分支并拉取最新代码 2. 更新任务状态 -> DONE 3. 根据配置决定是否删除本地功能分支
 #### config
 -  list   列出当前所有配置
+-  keys   列出所有可用的配置项
 - set    设置配置项.会自动尝试将 "true"/"false" 转为布尔值，数字转为 int.
+#### AI 配置 (ctx config keys 查看全部)
+| 配置项 | 说明 |
+|--------|------|
+| ai_provider | AI 提供商 (openai/anthropic/local) |
+| ai_api_key | AI API Key |
+| ai_model | AI 模型名称 |
+| ai_base_url | AI API 基础 URL (用于本地模型或反向代理)
 #### worktree
 - 集成 Git Worktree 功能，支持在独立目录中并行开发多个任务
 
@@ -169,12 +177,12 @@ JWT 认证系统：完整的用户认证和授权机制
 
 ### AI 能力（核心亮点功能）
 
-| 功能 | 描述 | 依赖 |
+| 功能 | 状态 | 描述 |
 |------|------|------|
-| **语义查重** | 提单时 AI 实时计算向量相似度，提示疑似重复工单 | pgvector、OpenAI/LangChain |
-| **解决方案推荐** | 自动聚合历史相似工单的 PR 代码与解决文档 | pgvector、OpenAI/LangChain |
-| **文档生成** | 自动解析 Git Diff，生成标准化的 Commit Message 与 PR 描述 | OpenAI/LangChain |
-| **智能审查** | 结合代码规范对提交代码进行自动化扫描与打分 | OpenAI/LangChain |
+| **语义查重** | 待实现 | 提单时 AI 实时计算向量相似度，提示疑似重复工单 |
+| **解决方案推荐** | 待实现 | 自动聚合历史相似工单的 PR 代码与解决文档 |
+| **文档生成** | ✅ 已实现 | 自动解析 Git Diff，生成标准化的 Commit Message 与 PR 描述 |
+| **智能审查** | 待实现 | 结合代码规范对提交代码进行自动化扫描与打分 |
 
 ### 数据报表功能
 
@@ -183,14 +191,14 @@ JWT 认证系统：完整的用户认证和授权机制
 | 数据报表页面 | 项目进度的宏观监控可视化（燃尽图、完成率统计等） |
 | 统计 API | 后端提供任务完成率、工时统计等数据接口 |
 
-### GitHub/GitLab 集成（部分实现）
+### GitHub/GitLab 集成
 
 | 功能 | 状态 |
 |------|------|
-| GitHub/GitLab Provider 框架 | 已实现 |
-| 创建 PR/MR | 已实现 |
-| **Git Diff 解析** | 未实现 |
-| **AI 代码审查回写到 PR 评论区** | 未实现 |
+| GitHub/GitLab Provider 框架 | ✅ 已实现 |
+| 创建 PR/MR | ✅ 已实现 |
+| Git Diff 解析 | ✅ 已实现 |
+| **AI 代码审查回写到 PR 评论区** | 待实现 |
 
 ### 基础设施
 
@@ -211,27 +219,36 @@ JWT 认证系统：完整的用户认证和授权机制
 
 ---
 
-## 四、缺失依赖
+## 四、依赖配置
 
-以下为实现 AI 功能需要添加的依赖：
+### 已安装的 AI 依赖
 
 ```toml
-# pyproject.toml 待添加
-langchain = "^0.2.0"
-langchain-openai = "^0.1.0"
+# pyproject.toml 已添加
 openai = "^1.0.0"
-pgvector = "^0.3.0"
-celery = "^5.4.0"
-redis = "^5.0.0"
+anthropic = "^0.0.0"
 ```
 
-### 待补充的环境变量
+### CLI 配置
 
 ```bash
-# .env 待配置
-OPENAI_API_KEY=""          # OpenAI API Key
-DATABASE_URL=""            # PostgreSQL + pgvector 连接字符串
-REDIS_URL=""               # Redis 连接字符串
-GITHUB_TOKEN=""            # GitHub Personal Access Token（可选）
-GITLAB_TOKEN=""            # GitLab Personal Access Token（可选）
+# 配置 AI 功能
+./scripts/ctx config set ai_provider anthropic    # 或 openai, local
+./scripts/ctx config set ai_api_key your-key
+./scripts/ctx config set ai_model claude-sonnet-4-20250514  # 可选
+./scripts/ctx config set ai_base_url https://api.minimaxi.com/anthropic  # 可选（反向代理）
+
+# 查看配置
+./scripts/ctx config list | grep ai
+
+# 查看所有可用配置项
+./scripts/ctx config keys
+```
+
+### 待实现功能依赖
+
+```bash
+# pgvector = "^0.3.0"    # 向量数据库（语义查重需要）
+# celery = "^5.4.0"       # 异步任务队列
+# redis = "^5.0.0"        # 任务队列后端
 ```

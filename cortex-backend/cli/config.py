@@ -21,6 +21,12 @@ GIT_PROVIDER = "git_provider"  # "github" 或 "gitlab"
 GITHUB_TOKEN = "github_token"
 GITLAB_TOKEN = "gitlab_token"
 
+# AI 配置
+AI_PROVIDER = "ai_provider"  # "openai", "anthropic", "local"
+AI_API_KEY = "ai_api_key"
+AI_MODEL = "ai_model"
+AI_BASE_URL = "ai_base_url"  # 用于本地模型
+
 def _load_full_config() -> Dict[str, Any]:
     """读取完整配置"""
     if not CONFIG_FILE.exists():

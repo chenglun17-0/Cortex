@@ -25,7 +25,10 @@ dependencies = [
     "bcrypt<5.0.0",
     "python-dotenv",
     "PyGithub",
-    "python-gitlab"
+    "python-gitlab",
+    # AI dependencies
+    "openai>=1.0.0",
+    "anthropic>=0.0.0",
 ]
 
 # 这里定义命令行入口

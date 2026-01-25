@@ -23,9 +23,11 @@ from cli.git import (
     commit_changes,
     get_main_branch,
     checkout_branch,
-    git_pull, delete_local_branch
+    git_pull, delete_local_branch,
+    get_diff_for_ai
 )
 from cli.providers import get_provider
+from cli.ai import generate_commit_message, generate_pr_description
 
 app = typer.Typer()
 console = Console()
@@ -228,13 +230,14 @@ def _get_git_provider():
 
 
 @app.command()
-def pr():
+def pr(use_ai: bool = typer.Option(True, "--ai/--no-ai", help="是否使用 AI 生成 commit message 和 PR 描述")):
     """
     提交任务:
     1. 识别当前任务分支
-    2. 更新状态 -> REVIEW
-    3. Git Push
-    4. 创建 PR/MR 并打开链接
+    2. 生成并提交 commit message（可选 AI 辅助）
+    3. 更新状态 -> REVIEW
+    4. Git Push
+    5. 创建 PR/MR 并打开链接
     """
     api = client()
     ensure_git_repo()
@@ -253,14 +256,37 @@ def pr():
 
     task_id = int(match.group(2))
 
+    # 获取任务信息（用于 AI 生成）
+    task_resp = api.get(f"/tasks/{task_id}")
+    task = task_resp.json() if task_resp.status_code == 200 else {}
+    task_title = task.get("title", f"Task #{task_id}")
+
+    # 获取 diff 用于 AI 生成
+    diff_for_ai = ""
+    if use_ai:
+        diff_for_ai = get_diff_for_ai()
+
     if has_uncommitted_changes():
         console.print("[yellow]⚡ Detected uncommitted changes.[/yellow]")
 
         # 2.1 执行 git add .
         console.print("Staging all changes...")
         stage_all_changes()
-        # 2.2 让用户输入提交信息
-        commit_msg = typer.prompt("Enter commit message")
+
+        # 2.2 生成/获取提交信息
+        commit_msg = None
+        if use_ai and diff_for_ai:
+            console.print("[cyan]🤖 Generating commit message with AI...[/cyan]")
+            commit_msg = generate_commit_message(diff_for_ai, task_title)
+            if commit_msg:
+                console.print(f"[green]AI suggested: {commit_msg}[/green]")
+                if not typer.confirm("Use this commit message?", default=True):
+                    commit_msg = None
+
+        # 如果没有 AI 生成或用户拒绝，让用户输入
+        if not commit_msg:
+            commit_msg = typer.prompt("Enter commit message")
+
         # 2.3 执行 commit
         if commit_msg.strip():
             commit_changes(commit_msg)
@@ -295,19 +321,29 @@ def pr():
     if provider:
         target_branch = get_main_branch()
         try:
-            # 获取任务信息作为 PR 标题
-            task_resp = api.get(f"/tasks/{task_id}")
-            task = task_resp.json() if task_resp.status_code == 200 else {}
             title = task.get("title", f"Task #{task_id}")
-
             is_gitlab = 'gitlab' in repo_url
+
+            # 生成 PR 描述
+            if use_ai and diff_for_ai:
+                console.print("[cyan]🤖 Generating PR description with AI...[/cyan]")
+                pr_description = generate_pr_description(
+                    diff=diff_for_ai,
+                    task_id=task_id,
+                    task_title=task_title,
+                    task_type=task.get("type", "feature"),
+                    task_description=task.get("description", ""),
+                )
+            else:
+                pr_description = f"Task #{task_id}\n\n{task.get('description', '')}"
+
             console.print(f"[cyan]Creating {'Merge Request' if is_gitlab else 'Pull Request'}...[/cyan]")
 
             pr_info = provider.create_pull_request(
                 title=title,
                 source_branch=branch_name,
                 target_branch=target_branch,
-                description=f"Task #{task_id}\n\n{task.get('description', '')}"
+                description=pr_description,
             )
 
             console.print(f"[green]✔ {'MR' if is_gitlab else 'PR'} created successfully![/green]")
