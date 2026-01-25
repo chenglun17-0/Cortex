@@ -38,24 +38,23 @@ BRANCH_PATTERN = re.compile(r"(feature|bug|docs|fix|chore|refactor)/task-(\d+)-"
 
 def _get_pr_from_branch(branch_name: str, provider) -> Optional[int]:
     """从分支名获取对应的 PR 编号"""
-    # 遍历 PRs 查找匹配的分支
-    # GitHub API
+    # GitHub API 方式: 使用 head 参数查询特定分支的 PR
+    # 格式: GET /repos/{owner}/{repo}/pulls?head=owner:branch_name
     try:
-        prs = provider._repo.get_pulls(state="open", head=branch_name)
-        for pr in prs:
-            if pr.head.ref == branch_name:
-                return pr.number
-    except Exception:
-        pass
+        # 提取 owner
+        remote_url = provider.repo_url
+        from urllib.parse import urlparse
+        parsed = urlparse(remote_url)
+        path = parsed.path.strip("/")  # owner/repo
+        owner = path.split("/")[0]
 
-    # 也检查以分支名结尾的 PRs
-    try:
-        prs = provider._repo.get_pulls(state="all")
+        # 使用 head 参数查询
+        prs = provider._repo.get_pulls(state="open", head=f"{owner}:{branch_name}")
         for pr in prs:
             if pr.head.ref == branch_name:
                 return pr.number
-    except Exception:
-        pass
+    except Exception as e:
+        console.print(f"[yellow]⚠️  查询 PR 失败: {e}[/yellow]")
 
     return None
 
@@ -169,7 +168,14 @@ def review(
 
             if not pr_number:
                 console.print(f"[yellow]⚠️  未找到分支 '{branch_name}' 对应的 PR[/yellow]")
-                return
+                pr_input = typer.prompt("请输入 PR 编号", default="")
+                if not pr_input:
+                    return
+                try:
+                    pr_number = int(pr_input)
+                except ValueError:
+                    console.print("[red]⚠️  PR 编号无效[/red]")
+                    return
 
             _publish_to_pr(pr_number, result)
         except Exception as e:
