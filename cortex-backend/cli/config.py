@@ -16,6 +16,11 @@ ACCESS_TOKEN = "access_token"
 DELETE_LOCAL_ON_DONE = "delete_local_on_done"
 DELETE_REMOTE_ON_DONE = "delete_remote_on_done"
 
+# Git Provider 配置
+GIT_PROVIDER = "git_provider"  # "github" 或 "gitlab"
+GITHUB_TOKEN = "github_token"
+GITLAB_TOKEN = "gitlab_token"
+
 def _load_full_config() -> Dict[str, Any]:
     """读取完整配置"""
     if not CONFIG_FILE.exists():
