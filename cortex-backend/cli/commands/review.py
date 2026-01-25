@@ -5,6 +5,7 @@ AI Code Review CLI Command
 - 审查 PR 中的代码变更
 - 将审查结果回写到 PR 评论区
 """
+import re
 import typer
 from typing import Optional
 from rich.console import Console
@@ -23,6 +24,7 @@ from cli.git import (
     ensure_git_repo,
     get_diff_for_ai,
     get_remote_url,
+    get_current_branch,
 )
 from cli.providers import get_provider
 from cli.providers.pr_comment import get_pr_comment_provider, ReviewComment
@@ -31,29 +33,65 @@ from cli.ai import review_code, get_code_reviewer
 app = typer.Typer()
 console = Console()
 
+BRANCH_PATTERN = re.compile(r"(feature|bug|docs|fix|chore|refactor)/task-(\d+)-")
+
+
+def _get_pr_from_branch(branch_name: str, provider) -> Optional[int]:
+    """从分支名获取对应的 PR 编号"""
+    # 遍历 PRs 查找匹配的分支
+    # GitHub API
+    try:
+        prs = provider._repo.get_pulls(state="open", head=branch_name)
+        for pr in prs:
+            if pr.head.ref == branch_name:
+                return pr.number
+    except Exception:
+        pass
+
+    # 也检查以分支名结尾的 PRs
+    try:
+        prs = provider._repo.get_pulls(state="all")
+        for pr in prs:
+            if pr.head.ref == branch_name:
+                return pr.number
+    except Exception:
+        pass
+
+    return None
+
 
 @app.command(name="review")
 def ai_review(
-    pr_number: int = typer.Argument(..., help="PR 编号"),
     publish: bool = typer.Option(False, "--publish", "-p", help="将审查结果发布到 PR 评论区"),
 ):
     """
-    AI 代码审查: 审查 PR 中的代码变更
+    AI 代码审查: 审查当前分支的代码变更并发布到 PR 评论区
 
     可选参数:
         --publish/-p: 将审查结果发布到 PR 评论区
 
     示例:
-        ctx review 4              # 只审查 PR #4
-        ctx review 4 --publish    # 审查并发布到 PR 评论区
+        ctx review               # 只审查当前分支
+        ctx review --publish     # 审查并发布到 PR 评论区
     """
     ensure_git_repo()
 
     # 检查是否启用 AI 审查
     review_enabled = get_config_value(AI_REVIEW_ENABLED, default=True)
     if not review_enabled:
-        console.print("[yellow]⚠️  AI 代码审查未启用。请先配置: ctx config set ai_review_enabled true[/yellow]")
+        console.print("[yellow]⚠️  AI 代码审查未启用。请先配置: ctx review status --enable[/yellow]")
         raise typer.Exit(0)
+
+    # 获取当前分支
+    branch_name = get_current_branch()
+
+    # 从分支名提取任务 ID
+    match = BRANCH_PATTERN.match(branch_name)
+    if not match:
+        console.print(f"[red]当前分支 '{branch_name}' 不是有效的 Cortex 任务分支[/red]")
+        raise typer.Exit(1)
+
+    task_id = int(match.group(2))
 
     # 获取 diff
     diff = get_diff_for_ai()
@@ -68,6 +106,8 @@ def ai_review(
 
     # 显示审查摘要
     console.print("\n[bold]审查摘要[/bold]")
+    console.print(f"任务 ID: #{task_id}")
+    console.print(f"分支: {branch_name}")
     console.print(f"评分: [bold]{result.score}/100[/bold]")
     console.print(f"{result.summary}\n")
 
@@ -96,7 +136,44 @@ def ai_review(
 
     # 发布到 PR 评论区
     if publish:
-        _publish_to_pr(pr_number, result)
+        # 获取 PR 编号
+        provider_type = get_config_value(GIT_PROVIDER)
+        if not provider_type:
+            console.print("[yellow]⚠️  未配置 git_provider，无法发布到 PR[/yellow]")
+            return
+
+        remote_url = get_remote_url()
+        if not remote_url:
+            console.print("[yellow]⚠️  无法获取远程仓库 URL[/yellow]")
+            return
+
+        # 获取 token
+        if provider_type == "github":
+            token = get_config_value(GITHUB_TOKEN)
+        elif provider_type == "gitee":
+            token = get_config_value(GITLAB_TOKEN)
+        else:
+            console.print(f"[yellow]⚠️  不支持的 provider: {provider_type}[/yellow]")
+            return
+
+        if not token:
+            console.print("[yellow]⚠️  未配置 API token[/yellow]")
+            return
+
+        try:
+            from cli.providers.base import PRInfo
+            git_provider = get_provider(provider_type, token, remote_url)
+
+            # 获取当前分支对应的 PR
+            pr_number = _get_pr_from_branch(branch_name, git_provider)
+
+            if not pr_number:
+                console.print(f"[yellow]⚠️  未找到分支 '{branch_name}' 对应的 PR[/yellow]")
+                return
+
+            _publish_to_pr(pr_number, result)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  获取 PR 失败: {e}[/yellow]")
 
 
 def _publish_to_pr(pr_number: int, result):
