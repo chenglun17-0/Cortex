@@ -87,6 +87,17 @@ JWT 认证系统：完整的用户认证和授权机制
 #### config
 -  list   列出当前所有配置
 - set    设置配置项.会自动尝试将 "true"/"false" 转为布尔值，数字转为 int.
+#### worktree
+- 集成 Git Worktree 功能，支持在独立目录中并行开发多个任务
+
+  | 子命令 | 说明 |
+  | ------ | ---- |
+  | `create <branch> [-p/--path <path>]` | 为指定分支创建新的 worktree（默认路径 `.worktrees/<branch>`） |
+  | `list` | 列出所有已创建的 worktree |
+  | `remove <path> [-f/--force]` | 删除指定的 worktree（`-f` 强制删除未提交的更改） |
+  | `prune` | 清理已失效的 worktree（分支已删除但目录仍在） |
+
+  **使用场景**：当需要并行处理多个任务时，可为每个任务创建独立的 worktree，避免频繁切换分支。
 
 ### 前端
 
