@@ -168,14 +168,14 @@ def get_diff_for_ai(max_length: int = 8000, use_staged: bool = True) -> str:
     import re
     # 过滤常见的敏感信息模式
     patterns = [
-        r'(token|key|secret|password|auth|credential)[^\s=]*[\s=]*[^\s\'"]+',
-        r'Bearer\s+[^\s\'"]+',
-        r'gh[puro]_[^\s\'"]+',
-        r'gitlab-token[^\s\'"]+',
-        r'AI_API_KEY.*',
+        (r'(token|key|secret|password|auth|credential)[^\s=]*[\s=]*[^\s\'"]+', r'\1=[FILTERED]'),
+        (r'Bearer\s+[^\s\'"]+', 'Bearer [FILTERED]'),
+        (r'gh[puro]_[^\s\'"]+', 'gh[puro]_[FILTERED]'),
+        (r'gitlab-token[^\s\'"]+', 'gitlab-token=[FILTERED]'),
+        (r'AI_API_KEY.*', 'AI_API_KEY=[FILTERED]'),
     ]
-    for pattern in patterns:
-        diff = re.sub(pattern, r'\1=[FILTERED]', diff, flags=re.IGNORECASE)
+    for pattern, repl in patterns:
+        diff = re.sub(pattern, repl, diff, flags=re.IGNORECASE)
 
     # 截断过长的 diff
     if len(diff) > max_length:
