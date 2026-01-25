@@ -1,4 +1,5 @@
 """GitLab Provider 实现"""
+from typing import Optional
 from urllib.parse import urlparse
 from gitlab import Gitlab
 from gitlab.exceptions import GitlabGetError, GitlabCreateError, GitlabMRClosedError

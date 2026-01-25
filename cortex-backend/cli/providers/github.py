@@ -1,5 +1,6 @@
 """GitHub Provider 实现"""
 import re
+from typing import Optional
 from urllib.parse import urlparse
 from github import Github, GithubException
 from github.PullRequest import PullRequest
