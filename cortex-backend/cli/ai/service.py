@@ -262,9 +262,9 @@ def get_ai_service(provider: Optional[str] = None) -> Optional[AIService]:
 
     provider = provider.lower()
 
-    # 检测 MiniMax API（使用 OpenAI 客户端格式）
-    if base_url and "minimaxi" in base_url.lower():
-        return OpenAIService(api_key=api_key, model=model or "MiniMax-M2.1", base_url=base_url)
+    # 如果 provider 是 anthropic 且 base_url 包含 minimaxi，使用 AnthropicService
+    if provider == "anthropic" and base_url:
+        return AnthropicService(api_key=api_key, model=model or "MiniMax-M2.1", base_url=base_url)
 
     if provider == "openai":
         return OpenAIService(api_key=api_key, model=model or "gpt-4o", base_url=base_url)
