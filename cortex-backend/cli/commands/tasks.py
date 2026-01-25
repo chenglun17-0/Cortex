@@ -351,8 +351,8 @@ def pr(use_ai: bool = typer.Option(True, "--ai/--no-ai", help="是否使用 AI �
             console.print(f"[green]✔ {'MR' if is_gitlab else 'PR'} created successfully![/green]")
             console.print(f"[bold cyan]🔗 {'MR' if is_gitlab else 'PR'} URL:[/bold cyan] {pr_info.url}")
 
-            # 6. AI 代码审查并发布到 PR 评论区
-            _publish_review_to_pr(pr_info.number, diff_for_ai if diff_for_ai else get_diff_for_ai())
+            # 6. AI 代码审查并发布到 PR 评论区（使用当前分支与主分支的差异）
+            _publish_review_to_pr(pr_info.number, diff_for_ai if diff_for_ai else get_diff_for_ai(use_staged=False))
 
             # 询问是否自动打开浏览器
             if typer.confirm("Open in browser?", default=True):

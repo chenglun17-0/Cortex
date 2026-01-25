@@ -93,8 +93,8 @@ def review(
 
     task_id = int(match.group(2))
 
-    # 获取 diff
-    diff = get_diff_for_ai()
+    # 获取 diff（当前分支与主分支的差异）
+    diff = get_diff_for_ai(use_staged=False)
     if not diff:
         console.print("[yellow]⚠️  没有检测到代码变更[/yellow]")
         raise typer.Exit(0)
