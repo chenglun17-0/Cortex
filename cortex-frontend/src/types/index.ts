@@ -32,13 +32,10 @@ export interface ProjectUpdate {
     description?: string;
 }
 
-export const TaskStatus = {
-    TODO: 'TODO',
-    IN_PROGRESS: 'IN_PROGRESS',
-    REVIEW: 'REVIEW',
-    DONE: 'DONE',
-} as const;
-export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
+// 从 constants 导入，保持一致性
+import { TaskStatus } from '../constants';
+
+export { TaskStatus };
 
 export interface Task {
   id: number;

@@ -1,39 +1,24 @@
-import React, { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm } from 'antd';
-import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
 import { getProjects, getProjectMembers, addProjectMember, removeProjectMember, searchUsers } from '../projects/service';
 import { type Task, TaskStatus, type Project, type User } from '../../types';
-
+import { KanbanColumns } from '../../constants';
+import { getPriorityConfig } from '../../utils';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// 定义看板的列结构
-const COLUMNS = [
-    { id: TaskStatus.TODO, title: '待处理', color: '#64748b' },
-    { id: TaskStatus.IN_PROGRESS, title: '进行中', color: '#3b82f6' },
-    { id: TaskStatus.REVIEW, title: '待审核', color: '#f59e0b' },
-    { id: TaskStatus.DONE, title: '已完成', color: '#10b981' },
-];
-
-const PriorityTag: React.FC<{ priority: string }> = ({ priority }) => {
-  const colors: Record<string, string> = {
-    HIGH: 'red',
-    MEDIUM: 'orange',
-    LOW: 'blue',
-  };
-  const textMap: Record<string, string> = {
-    HIGH: '高',
-    MEDIUM: '中',
-    LOW: '低',
-  };
+// PriorityTag 组件 - 使用统一的优先级配置
+const PriorityTag: React.FC<{ priority?: string }> = ({ priority }) => {
+  const config = getPriorityConfig(priority);
   return (
-    <Tag color={colors[priority] || 'default'} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
-      {textMap[priority] || priority}
+    <Tag color={config.color} variant="filled" style={{ fontSize: '10px', lineHeight: '16px' }}>
+      {config.text}
     </Tag>
   );
 };
@@ -67,7 +52,7 @@ export const KanbanBoard: React.FC = () => {
     const isLoading = isLoadingTasks || isLoadingProjects;
 
     // 成员管理
-    const { data: members = [], refetch: refetchMembers } = useQuery({
+    const { data: members = [] } = useQuery({
         queryKey: ['projectMembers', projectId],
         queryFn: () => getProjectMembers(Number(projectId)),
         enabled: !!projectId && memberDrawerOpen,
@@ -303,7 +288,7 @@ export const KanbanBoard: React.FC = () => {
             {/* 拖拽上下文 */}
             <DragDropContext onDragEnd={onDragEnd}>
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 16, flex: 1 }}>
-                    {COLUMNS.map((col) => (
+                    {KanbanColumns.map((col) => (
                         <Droppable key={col.id} droppableId={col.id}>
                             {(provided, snapshot) => (
                                 <div
