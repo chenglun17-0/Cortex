@@ -27,6 +27,10 @@ AI_API_KEY = "ai_api_key"
 AI_MODEL = "ai_model"
 AI_BASE_URL = "ai_base_url"  # 用于本地模型
 
+# AI 代码审查配置
+AI_REVIEW_ENABLED = "ai_review_enabled"
+AI_REVIEW_DIMENSIONS = "ai_review_dimensions"  # ["quality", "security", "type", "convention"]
+
 def _load_full_config() -> Dict[str, Any]:
     """读取完整配置"""
     if not CONFIG_FILE.exists():
