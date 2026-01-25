@@ -113,30 +113,12 @@ def review(
     console.print(f"任务 ID: #{task_id}")
     console.print(f"分支: {branch_name}")
     console.print(f"评分: [bold]{result.score}/100[/bold]")
-    console.print(f"{result.summary}\n")
+    console.print(f"{result.summary}")
 
-    # 显示问题列表
-    if result.issues:
-        table = Table()
-        table.add_column("文件", style="cyan")
-        table.add_column("行号", style="magenta", justify="right")
-        table.add_column("问题", style="red")
-        table.add_column("类别", style="yellow")
-        table.add_column("严重程度", style="green")
-
-        for issue in result.issues:
-            severity_icon = {"error": "🔴", "warning": "🟡", "info": "🔵"}.get(issue.severity, "⚪")
-            table.add_row(
-                issue.file,
-                str(issue.line),
-                issue.message[:80] + "..." if len(issue.message) > 80 else issue.message,
-                issue.category,
-                f"{severity_icon} {issue.severity}"
-            )
-
-        console.print(table)
-    else:
-        console.print("[green]✅ 没有发现代码问题[/green]")
+    # 显示原始内容（如果可用）
+    if result.raw_content:
+        console.print("\n[bold]AI 原始审查结果:[/bold]")
+        console.print(result.raw_content[:500] + "..." if len(result.raw_content) > 500 else result.raw_content)
 
     # 发布到 PR 评论区
     if publish:
@@ -215,29 +197,13 @@ def _publish_to_pr(pr_number: int, result):
     try:
         comment_provider = get_pr_comment_provider(provider_type, token, remote_url)
 
-        # 构建审查结果摘要评论
-        body = _format_review_comment(result)
-
-        # 创建摘要评论
-        summary_id = comment_provider.create_review_comment(pr_number, body)
-        console.print(f"[green]✅ 已发布审查摘要到 PR #{pr_number}[/green]")
-
-        # 批量创建详细问题评论
-        if result.issues:
-            comments = []
-            for issue in result.issues:
-                comment = ReviewComment(
-                    path=issue.file,
-                    line=issue.line,
-                    body=f"**[{issue.category}]** {issue.message}\n\n建议: {issue.suggestion or '无'}",
-                    severity=issue.severity
-                )
-                comments.append(comment)
-
-            comment_ids = comment_provider.create_review_comments_batch(pr_number, comments)
-            console.print(f"[green]✅ 已发布 {len(comment_ids)} 条详细审查评论到 PR #{pr_number}[/green]")
+        # 直接发布 AI 原始返回内容
+        if result.raw_content:
+            body = f"## AI 代码审查结果\n\n{result.raw_content}"
+            comment_provider.create_review_comment(pr_number, body)
+            console.print(f"[green]✅ 已发布审查结果到 PR #{pr_number}[/green]")
         else:
-            console.print("[yellow]⚠️  没有发现代码问题，无需发布详细评论[/yellow]")
+            console.print("[yellow]⚠️  没有审查结果可发布[/yellow]")
 
     except Exception as e:
         console.print(f"[red]⚠️  发布失败: {e}[/red]")

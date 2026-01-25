@@ -30,6 +30,7 @@ class CodeIssue:
 class CodeReviewResult:
     """代码审查结果"""
     summary: str
+    raw_content: str = ""  # AI 原始返回内容
     issues: List[CodeIssue] = field(default_factory=list)
     score: int = 100  # 代码评分 0-100
 
@@ -67,27 +68,7 @@ CODE_REVIEW_PROMPT = """你是一个专业的代码审查助手。请审查以�
    - 问题描述
    - 建议的修复方案
 
-## 输出格式：
-请以 JSON 格式输出审查结果：
-
-```json
-{{
-  "summary": "审查摘要（2-3句话总结主要发现）",
-  "issues": [
-    {{
-      "file": "文件路径",
-      "line": 行号,
-      "message": "问题描述",
-      "category": "quality/security/type/convention",
-      "severity": "info/warning/error",
-      "suggestion": "修复建议（可选）"
-    }}
-  ],
-  "score": 评分(0-100)
-}}
-```
-
-只输出 JSON，不要有其他内容。"""
+请用 Markdown 格式输出审查结果。"""
 
 
 # ============== Abstract Base Class ==============
@@ -109,51 +90,12 @@ class AICodeReviewer(CodeReviewer):
     def __init__(self, ai_service: AIService):
         self.ai_service = ai_service
 
-    def _parse_review_result(self, content: str) -> CodeReviewResult:
-        """解析 AI 返回的审查结果"""
-        # 提取 JSON
-        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', content)
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            # 尝试直接解析
-            json_str = content
-
-        import json as json_module
-        try:
-            data = json_module.loads(json_str.strip())
-        except json_module.JSONDecodeError:
-            # 如果解析失败，返回默认结果
-            return CodeReviewResult(
-                summary="代码审查失败，请手动检查",
-                issues=[],
-                score=100
-            )
-
-        # 构建结果
-        result = CodeReviewResult(
-            summary=data.get("summary", "审查完成"),
-            score=data.get("score", 100)
-        )
-
-        for issue_data in data.get("issues", []):
-            issue = CodeIssue(
-                file=issue_data.get("file", ""),
-                line=issue_data.get("line", 0),
-                message=issue_data.get("message", ""),
-                category=issue_data.get("category", "quality"),
-                severity=issue_data.get("severity", "info"),
-                suggestion=issue_data.get("suggestion")
-            )
-            result.add_issue(issue)
-
-        return result
-
     def review(self, diff: str) -> CodeReviewResult:
         """审查代码变更"""
         if not self.ai_service:
             return CodeReviewResult(
                 summary="AI 服务未配置，跳过审查",
+                raw_content="",
                 issues=[],
                 score=100
             )
@@ -163,10 +105,25 @@ class AICodeReviewer(CodeReviewer):
                 "You are a professional code reviewer.",
                 CODE_REVIEW_PROMPT.format(diff=diff)
             )
-            return self._parse_review_result(response)
+
+            if not response:
+                return CodeReviewResult(
+                    summary="AI 未返回审查结果",
+                    raw_content="",
+                    issues=[],
+                    score=100
+                )
+
+            return CodeReviewResult(
+                summary="AI 代码审查完成",
+                raw_content=response,
+                issues=[],
+                score=100  # 简化：直接使用原始内容，不做解析
+            )
         except Exception as e:
             return CodeReviewResult(
                 summary=f"审查出错: {str(e)}",
+                raw_content="",
                 issues=[],
                 score=100
             )
@@ -184,7 +141,16 @@ def get_code_reviewer() -> CodeReviewer:
     ai_service = get_ai_service()
     if ai_service:
         return AICodeReviewer(ai_service)
-    return CodeReviewer()  # 返回空审查器
+    # 返回一个空实现
+    class DummyReviewer(CodeReviewer):
+        def review(self, diff: str) -> CodeReviewResult:
+            return CodeReviewResult(
+                summary="AI 服务未配置，跳过审查",
+                raw_content="",
+                issues=[],
+                score=100
+            )
+    return DummyReviewer()
 
 
 # ============== Convenience Function ==============

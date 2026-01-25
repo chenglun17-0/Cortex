@@ -140,7 +140,7 @@ class AnthropicService(AIService):
         """调用 LLM"""
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=500,
+            max_tokens=4096,  # 增加 token 限制
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
