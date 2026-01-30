@@ -25,14 +25,17 @@ git pull origin main
 
 echo -e "${GREEN}[2/4] 检查 .env 配置...${NC}"
 
-if [ -f ".env" ]; then
-    if grep -q "your-password\|your-secret-key\|your_api_key" .env 2>/dev/null; then
+ENV_FILE="$PROJECT_DIR/cortex-backend/.env"
+
+if [ -f "$ENV_FILE" ]; then
+    if grep -q "your-password\|your-secret-key\|your_api_key" "$ENV_FILE" 2>/dev/null; then
         echo -e "${RED}错误: .env 文件中还有占位符未替换！${NC}"
         echo "需要修改: your_password, your-secret-key, api keys 等"
         exit 1
     fi
 else
     echo -e "${RED}错误: .env 文件不存在！${NC}"
+    echo "请创建: $ENV_FILE"
     exit 1
 fi
 
