@@ -4,24 +4,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 安装 uv（使用官方安装脚本）
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# 安装系统依赖（仅编译 bcrypt 需要）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 uv 并设置 PATH（同一个 RUN）
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    export PATH="/root/.local/bin:$PATH" && \
+    uv pip install --system --no-cache .
 
 # 设置 Python 环境变量
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/root/.local/bin:$PATH"
-
-# 安装系统依赖（仅编译 bcrypt 需要）
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# 复制依赖文件
-COPY cortex-backend/pyproject.toml .
-
-# 使用 uv 安装依赖（比 pip 快 10-100 倍）
-RUN uv pip install --system --no-cache .
 
 # 复制应用代码
 COPY cortex-backend/ ./
