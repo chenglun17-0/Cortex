@@ -51,11 +51,11 @@ export const KanbanBoard: React.FC = () => {
 
     const isLoading = isLoadingTasks || isLoadingProjects;
 
-    // 成员管理
+    // 成员管理 - 不依赖 drawer 打开状态，直接加载
     const { data: members = [] } = useQuery({
         queryKey: ['projectMembers', projectId],
         queryFn: () => getProjectMembers(Number(projectId)),
-        enabled: !!projectId && memberDrawerOpen,
+        enabled: !!projectId,
     });
 
     const { data: searchResults = [], isLoading: isSearching } = useQuery({
@@ -437,7 +437,7 @@ export const KanbanBoard: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item name="description" label="详细描述">
-                        <Input.TextArea rows={4} placeholder="输入项目描述..." style={{ borderRadius: 6 }} />
+                        <Input.TextArea rows={4} placeholder="输入任务描述..." style={{ borderRadius: 6 }} />
                     </Form.Item>
                 </Form>
             </Modal>
