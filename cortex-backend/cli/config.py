@@ -15,6 +15,8 @@ GIT_MAIN_BRANCH = "git_main_branch"
 ACCESS_TOKEN = "access_token"
 DELETE_LOCAL_ON_DONE = "delete_local_on_done"
 DELETE_REMOTE_ON_DONE = "delete_remote_on_done"
+DELETE_WORKTREE_ON_DONE = "delete_worktree_on_done"
+USE_WORKTREE = "use_worktree"
 
 # Git Provider 配置
 GIT_PROVIDER = "git_provider"  # "github" 或 "gitlab"

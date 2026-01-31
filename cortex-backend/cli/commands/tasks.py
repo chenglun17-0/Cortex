@@ -2,6 +2,7 @@ import secrets
 import webbrowser
 import re
 import json
+import os
 import typer
 from datetime import datetime
 from rich.console import Console
@@ -9,7 +10,8 @@ from rich.table import Table
 from cli.api import client
 from cli.config import (
     get_config_value, DELETE_LOCAL_ON_DONE, DELETE_REMOTE_ON_DONE,
-    GIT_PROVIDER, GITHUB_TOKEN, GITLAB_TOKEN
+    DELETE_WORKTREE_ON_DONE,
+    GIT_PROVIDER, GITHUB_TOKEN, GITLAB_TOKEN, USE_WORKTREE
 )
 from cli.git import (
     create_branch,
@@ -24,7 +26,10 @@ from cli.git import (
     get_main_branch,
     checkout_branch,
     git_pull, delete_local_branch,
-    get_diff_for_ai
+    get_diff_for_ai,
+    create_worktree,
+    remove_worktree,
+    run_git_command,
 )
 from cli.providers import get_provider
 from cli.providers.pr_comment import get_pr_comment_provider, ReviewComment
@@ -147,12 +152,13 @@ def list_tasks(json_output: bool = typer.Option(False, "--json", help="以 JSON 
     console.print(table)
 
 @app.command()
-def start(task_id: int):
+def start(task_id: int, use_worktree: bool = typer.Option(None, "--worktree/--no-worktree", help="是否使用 worktree")):
     """
     开始任务:
     1. 检查/生成随机分支名并绑定到任务
     2. 更新状态为 IN_PROGRESS
-    3. 切换 Git 分支
+    3. 创建 worktree（如果启用）
+    4. 切换 Git 分支
     """
     api = client()
     ensure_git_repo()
@@ -187,8 +193,21 @@ def start(task_id: int):
     if patch_resp.status_code != 200:
         console.print(f"[red]Failed to update task: {patch_resp.text}[/red]")
         raise typer.Exit(1)
+
+    # 判断是否使用 worktree
+    if use_worktree is None:
+        use_worktree = get_config_value(USE_WORKTREE, default=True)
+
     try:
-        create_branch(branch_name)
+        # 创建 worktree（如果启用）
+        if use_worktree:
+            worktree_path = create_worktree(branch_name, task_id)
+            # 切换到 worktree 目录
+            os.chdir(worktree_path)
+            console.print(f"[green]✔ Switched to worktree: {worktree_path}[/green]")
+        else:
+            create_branch(branch_name)
+
         console.print(f"[green]✔ Task updated to IN_PROGRESS[/green]")
         console.print(f"[green]✔ Switched to branch: [bold]{branch_name}[/bold][/green]")
         console.print("[yellow]Happy coding! 💻[/yellow]")
@@ -382,7 +401,8 @@ def done():
     完成任务 (远程已合并):
     1. 切换回 Main 分支并拉取最新代码
     2. 更新任务状态 -> DONE
-    3. 根据配置决定是否删除本地功能分支
+    3. 删除 worktree（如果使用了 worktree）
+    4. 根据配置决定是否删除本地功能分支
     """
     api = client()
     ensure_git_repo()
@@ -401,14 +421,41 @@ def done():
     main_branch = get_main_branch()
     console.print(f"[cyan]🚀 Wrapping up task #{task_id}...[/cyan]")
 
+    # 保存当前工作目录（如果是在 worktree 中）
+    original_cwd = os.getcwd()
+
     try:
         # 切换回 main 分支
         checkout_branch(main_branch)
         git_pull()
+
         # 更新任务状态为 DONE
         patch_resp = api.patch(f"/tasks/{task_id}", json_data={"status": "DONE"})
         if patch_resp.status_code == 200:
             console.print(f"[green]✔ Task status updated to DONE[/green]")
+
+        # 检查是否需要清理 worktree
+        should_delete_worktree = get_config_value(DELETE_WORKTREE_ON_DONE, default=False)
+
+        if should_delete_worktree:
+            try:
+                # 获取主仓库根目录
+                repo_root = run_git_command(["rev-parse", "--show-toplevel"])
+                # 如果当前目录不在主仓库中，说明使用了 worktree
+                if not original_cwd.startswith(repo_root):
+                    worktree_path = original_cwd
+                    console.print(f"[cyan]🧹 Cleaning up worktree at {worktree_path}...[/cyan]")
+                    remove_worktree(feature_branch, task_id)
+                    # 切换回项目目录
+                    os.chdir(repo_root)
+                    console.print(f"[green]✔ Returned to project directory[/green]")
+                else:
+                    console.print("[blue]ℹ️  Not in a worktree. Skipping worktree cleanup.[/blue]")
+            except Exception as e:
+                console.print(f"[yellow]Warning: Could not check/cleanup worktree: {e}[/yellow]")
+        else:
+            if not original_cwd.startswith(run_git_command(["rev-parse", "--show-toplevel"])):
+                console.print(f"[blue]ℹ️  Config 'delete_worktree_on_done' is False. Worktree kept at {original_cwd}[/blue]")
 
         # 读取配置
         should_delete_local = get_config_value(DELETE_LOCAL_ON_DONE, default=False)

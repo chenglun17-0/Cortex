@@ -1,3 +1,4 @@
+import os
 import subprocess
 import typer
 
@@ -141,6 +142,69 @@ def get_branch_diff(branch: str, base_branch: str = "main") -> str:
         diff 字符串
     """
     return run_git_command(["diff", f"{base_branch}...{branch}"])
+
+
+def get_worktree_base_path() -> str:
+    """获取 worktree 的基础路径（项目目录的上一级）"""
+    # 获取当前 git 仓库的根目录
+    repo_root = run_git_command(["rev-parse", "--show-toplevel"])
+    # 返回上一级目录作为 worktree 基础路径
+    return os.path.dirname(repo_root)
+
+
+def get_worktree_path(branch_name: str, task_id: int) -> str:
+    """获取指定任务的 worktree 路径"""
+    base_path = get_worktree_base_path()
+    repo_name = run_git_command(["rev-parse", "--show-toplevel"]).split("/")[-1]
+    return os.path.join(base_path, f"{repo_name}-worktree", f"{task_id}-{branch_name}")
+
+
+def create_worktree(branch_name: str, task_id: int) -> str:
+    """创建 worktree 并返回路径"""
+    worktree_path = get_worktree_path(branch_name, task_id)
+
+    # 检查 worktree 是否已存在
+    if os.path.exists(worktree_path):
+        typer.echo(f"Worktree already exists at '{worktree_path}'. Using it...")
+        return worktree_path
+
+    # 获取主分支名
+    main_branch = get_main_branch()
+
+    typer.echo(f"Creating worktree at '{worktree_path}'...")
+    try:
+        run_git_command(["worktree", "add", worktree_path, branch_name])
+        typer.echo(f"[green]✔ Worktree created successfully[/green]")
+        return worktree_path
+    except Exception as e:
+        typer.echo(f"[red]Failed to create worktree: {e}[/red]")
+        raise typer.Exit(1)
+
+
+def remove_worktree(branch_name: str, task_id: int) -> bool:
+    """删除 worktree"""
+    worktree_path = get_worktree_path(branch_name, task_id)
+
+    if not os.path.exists(worktree_path):
+        typer.echo(f"[yellow]Worktree at '{worktree_path}' does not exist. Skipping.[/yellow]")
+        return True
+
+    typer.echo(f"Removing worktree at '{worktree_path}'...")
+    try:
+        # 先切换出 worktree（如果当前在 worktree 中）
+        current_branch = get_current_branch()
+        if current_branch == branch_name:
+            # 切换回主分支
+            main_branch = get_main_branch()
+            checkout_branch(main_branch)
+
+        # 删除 worktree
+        run_git_command(["worktree", "remove", worktree_path])
+        typer.echo(f"[green]✔ Worktree removed successfully[/green]")
+        return True
+    except Exception as e:
+        typer.echo(f"[yellow]Warning: Failed to remove worktree: {e}[/yellow]")
+        return False
 
 def get_diff_for_ai(max_length: int = 8000, use_staged: bool = True) -> str:
     """

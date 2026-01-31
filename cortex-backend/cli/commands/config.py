@@ -5,8 +5,10 @@ from cli.config import (
     set_config_value, _load_full_config,
     API_URL, GIT_MAIN_BRANCH, ACCESS_TOKEN,
     DELETE_LOCAL_ON_DONE, DELETE_REMOTE_ON_DONE,
+    DELETE_WORKTREE_ON_DONE,
     GIT_PROVIDER, GITHUB_TOKEN, GITLAB_TOKEN,
     AI_PROVIDER, AI_API_KEY, AI_MODEL, AI_BASE_URL,
+    USE_WORKTREE,
 )
 
 app = typer.Typer()
@@ -19,6 +21,8 @@ CONFIG_KEYS = {
     "access_token": "Cortex 后端访问令牌",
     "delete_local_on_done": "完成任务后删除本地分支",
     "delete_remote_on_done": "完成任务后删除远程分支",
+    "delete_worktree_on_done": "完成任务后删除 worktree",
+    "use_worktree": "是否默认启用 worktree 模式",
     "git_provider": "Git 提供商 (github/gitlab)",
     "github_token": "GitHub Personal Access Token",
     "gitlab_token": "GitLab Personal Access Token",
