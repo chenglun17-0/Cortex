@@ -160,7 +160,7 @@ def get_worktree_path(branch_name: str, task_id: int) -> str:
 
 
 def create_worktree(branch_name: str, task_id: int) -> str:
-    """创建 worktree 并返回路径"""
+    """创建 worktree 并返回路径（基于主分支创建新分支）"""
     worktree_path = get_worktree_path(branch_name, task_id)
 
     # 检查 worktree 是否已存在
@@ -173,7 +173,8 @@ def create_worktree(branch_name: str, task_id: int) -> str:
 
     typer.echo(f"Creating worktree at '{worktree_path}'...")
     try:
-        run_git_command(["worktree", "add", worktree_path, branch_name])
+        # 基于主分支创建新的 worktree 分支
+        run_git_command(["worktree", "add", worktree_path, "-b", branch_name, main_branch])
         typer.echo(f"[green]✔ Worktree created successfully[/green]")
         return worktree_path
     except Exception as e:
