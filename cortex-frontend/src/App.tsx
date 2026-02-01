@@ -7,6 +7,7 @@ import { KanbanBoard } from './features/tasks/KanbanBoard';
 import { TaskListPage } from './features/tasks/TaskListPage';
 import { TaskDetailPage } from './features/tasks/TaskDetailPage';
 import { TaskBoardPage } from './features/tasks/TaskBoardPage';
+import { CreateTaskPage } from './features/tasks/CreateTaskPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { ProfilePage } from './features/auth/ProfilePage';
 
@@ -37,6 +38,7 @@ const App: React.FC = () => {
             <Route path="/projects/:projectId" element={<KanbanBoard />} />
             <Route path="/tasks" element={<TaskListPage />} />
             <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+            <Route path="/tasks/new" element={<CreateTaskPage />} />
             <Route path="/board" element={<TaskBoardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

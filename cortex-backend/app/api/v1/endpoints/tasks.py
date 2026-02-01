@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.models import Task, User, Project
+from app.services.vector_store import upsert_task_embedding, delete_task_embedding
 
 router = APIRouter()
 
@@ -31,6 +32,11 @@ async def create_task(
         project=project,
         assignee_id=assignee_id
     )
+
+    # 3. 存储任务向量（异步，不阻塞响应）
+    text_content = f"{task_in.title}\n{task_in.description or ''}"
+    await upsert_task_embedding(task.id, text_content)
+
     return task
 
 
@@ -87,6 +93,10 @@ async def delete_task(
 
     task.deleted_at = datetime.utcnow()
     await task.save()
+
+    # 删除任务向量（异步）
+    await delete_task_embedding(task_id)
+
     return {"message": "Task deleted successfully"}
 
 
@@ -114,4 +124,10 @@ async def update_task(
 
     # 4. 保存
     await task.save()
+
+    # 5. 如果标题或描述更新，同步更新向量
+    if task_update.title or task_update.description:
+        text_content = f"{task.title}\n{task.description or ''}"
+        await upsert_task_embedding(task.id, text_content)
+
     return task
