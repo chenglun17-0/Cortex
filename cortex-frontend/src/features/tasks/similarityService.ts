@@ -4,7 +4,7 @@
  */
 import { http } from '../../lib/http';
 
-export interface SimilarTask {
+export type SimilarTask = {
   task_id: number;
   title: string;
   description?: string;
@@ -13,22 +13,22 @@ export interface SimilarTask {
   project_id: number;
   similarity: number;
   created_at?: string;
-}
+};
 
-export interface SimilaritySearchResponse {
+export type SimilaritySearchResponse = {
   success: boolean;
   query: string;
   results: SimilarTask[];
   total: number;
   message?: string;
-}
+};
 
-export interface SimilaritySearchParams {
+export type SimilaritySearchParams = {
   text: string;
   exclude_task_id?: number;
   limit?: number;
   threshold?: number;
-}
+};
 
 /**
  * 搜索相似任务

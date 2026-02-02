@@ -8,7 +8,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { searchSimilarTasks, SimilarTask } from './similarityService';
+import { searchSimilarTasks } from './similarityService';
+import type { SimilarTask } from './similarityService';
 import { getProjects } from '../projects/service';
 import { createTask } from './service';
 import type { TaskCreate } from '../../types';
