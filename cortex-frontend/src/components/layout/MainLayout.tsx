@@ -9,6 +9,7 @@ import {
   DashboardOutlined,
   CheckSquareOutlined,
   BorderlessTableOutlined,
+  PlusSquareOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -52,6 +53,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: '/tasks',
       icon: <CheckSquareOutlined />,
       label: '我的任务',
+    },
+    {
+      key: '/tasks/new',
+      icon: <PlusSquareOutlined />,
+      label: '创建任务',
     },
     {
       key: '/board',

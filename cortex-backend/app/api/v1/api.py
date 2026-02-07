@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import organizations, users, login, tasks, projects
+from app.api.v1.endpoints import organizations, users, login, tasks, projects, similarity
 api_router = APIRouter()
 
 # 注册路由
@@ -28,4 +28,9 @@ api_router.include_router(
     projects.router,
     prefix="/projects",
     tags=["projects"]
+)
+api_router.include_router(
+    similarity.router,
+    prefix="/similarity",
+    tags=["similarity"]
 )

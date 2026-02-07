@@ -201,6 +201,7 @@ def start(task_id: int, use_worktree: bool = typer.Option(None, "--worktree/--no
     try:
         # 创建 worktree（如果启用）
         if use_worktree:
+            # 先创建 worktree（基于主分支创建新分支）
             worktree_path = create_worktree(branch_name, task_id)
             # 切换到 worktree 目录
             os.chdir(worktree_path)
