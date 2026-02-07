@@ -4,10 +4,7 @@
 提供任务语义相似度搜索功能：
 - POST /similarity/search - 搜索相似任务
 """
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 
 from app.services.vector_store import search_similar_tasks
 from app.schemas.similarity import (
@@ -17,16 +14,7 @@ from app.schemas.similarity import (
 )
 from app.api.deps import get_current_user
 
-
 router = APIRouter(prefix="/similarity", tags=["similarity"])
-
-
-class SimilaritySearchBody(BaseModel):
-    """相似度搜索请求体（兼容非 Pydantic 的调用）"""
-    text: str
-    exclude_task_id: Optional[int] = None
-    limit: int = 5
-    threshold: float = 0.5
 
 
 @router.post("/search", response_model=SimilaritySearchResponse)
@@ -66,6 +54,9 @@ async def search_similar(
             ],
             total=len(results),
         )
+    except RuntimeError as e:
+        # embedding 生成失败
+        raise HTTPException(status_code=503, detail=f"AI 服务暂时不可用: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
 

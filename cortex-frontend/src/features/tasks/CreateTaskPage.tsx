@@ -67,7 +67,7 @@ export const CreateTaskPage: React.FC = () => {
       const response = await searchSimilarTasks({
         text: textContent,
         limit: 5,
-        threshold: 0.3,
+        threshold: 0.5,
       });
 
       if (response.success) {
