@@ -62,4 +62,6 @@ export interface TaskCreate {
   priority?: string;
   project_id: number;
   status?: TaskStatus; // 可选，默认为 TODO
+  type?: string; // 任务类型: feature, bug, docs, fix, refactor, chore
+  deadline?: string; // 截止日期 YYYY-MM-DD
 }
