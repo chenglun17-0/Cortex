@@ -3,7 +3,6 @@
 """
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from app.schemas.task import TaskPriority, TaskStatus
 
 
 class SimilaritySearchRequest(BaseModel):
@@ -19,8 +18,8 @@ class SimilarTaskItem(BaseModel):
     task_id: int
     title: str
     description: Optional[str] = None
-    status: TaskStatus
-    priority: TaskPriority
+    status: str
+    priority: str
     project_id: int
     similarity: float = Field(..., description="相似度 (0-1)")
     created_at: Optional[str] = None
