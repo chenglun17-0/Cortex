@@ -14,8 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY cortex-backend/pyproject.toml .
 
 # 安装 uv 并设置 PATH
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    export PATH="/root/.local/bin:$PATH" && \
+RUN pip install --no-cache-dir uv && \
     uv pip install --system --no-cache .
 
 # 设置 Python 环境变量
