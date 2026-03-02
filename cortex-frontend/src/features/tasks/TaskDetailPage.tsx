@@ -15,6 +15,8 @@ import {
   Select,
   Spin,
   Alert,
+  List,
+  Empty,
 } from 'antd';
 import {
   EditOutlined,
@@ -23,9 +25,9 @@ import {
   CloseOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getTaskById, updateTask } from './service';
+import { getTaskById, updateTask, getTaskComments, createTaskComment } from './service';
 import { getProjects } from '../projects/service';
-import type { Project } from '../../types';
+import type { Project, TaskComment, TaskUpdate } from '../../types';
 import { TaskStatus } from '../../types';
 import { getStatusConfig, getPriorityConfig, formatDateTime } from '../../utils';
 
@@ -35,20 +37,38 @@ const { TextArea } = Input;
 
 export const TaskDetailPage: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
+  const parsedTaskId = Number(taskId);
+  const hasValidTaskId = Number.isInteger(parsedTaskId) && parsedTaskId > 0;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentPageSize, setCommentPageSize] = useState(10);
   const [form] = Form.useForm();
+  const [commentForm] = Form.useForm();
 
-  const { data: task, isLoading, error } = useQuery({
-    queryKey: ['task', taskId],
-    queryFn: () => getTaskById(taskId!),
-    enabled: !!taskId,
+  const { data: task, isLoading, error, isSuccess: isTaskLoaded } = useQuery({
+    queryKey: ['task', parsedTaskId],
+    queryFn: () => getTaskById(parsedTaskId),
+    enabled: hasValidTaskId,
   });
 
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
+  });
+
+  const {
+    data: commentsData,
+    isLoading: commentsLoading,
+    isError: isCommentsLoadError,
+    error: commentsError,
+    isFetching: commentsFetching,
+    refetch: refetchComments,
+  } = useQuery({
+    queryKey: ['task-comments', parsedTaskId, commentPage, commentPageSize],
+    queryFn: () => getTaskComments(parsedTaskId, commentPage, commentPageSize),
+    enabled: hasValidTaskId && isTaskLoaded,
   });
 
   // 创建项目ID到项目名称的映射
@@ -64,16 +84,28 @@ export const TaskDetailPage: React.FC = () => {
   const projectName = task?.project_id ? projectNameMap.get(task.project_id) : undefined;
 
   const updateMutation = useMutation({
-    mutationFn: (data: { title?: string; description?: string; status?: TaskStatus; priority?: string }) =>
-      updateTask(Number(taskId), data),
+    mutationFn: (data: TaskUpdate) => updateTask(parsedTaskId, data),
     onSuccess: () => {
       message.success('任务更新成功');
       setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task', parsedTaskId] });
       queryClient.invalidateQueries({ queryKey: ['myTasks'] });
     },
     onError: () => {
       message.error('任务更新失败');
+    },
+  });
+
+  const createCommentMutation = useMutation({
+    mutationFn: (content: string) => createTaskComment(parsedTaskId, content),
+    onSuccess: () => {
+      message.success('评论发布成功');
+      commentForm.resetFields();
+      setCommentPage(1);
+      queryClient.invalidateQueries({ queryKey: ['task-comments', parsedTaskId] });
+    },
+    onError: () => {
+      message.error('评论发布失败');
     },
   });
 
@@ -91,7 +123,7 @@ export const TaskDetailPage: React.FC = () => {
     try {
       const values = await form.validateFields();
       updateMutation.mutate(values);
-    } catch (error) {
+    } catch {
       message.error('请检查表单填写');
     }
   };
@@ -100,6 +132,31 @@ export const TaskDetailPage: React.FC = () => {
     setIsEditing(false);
     form.resetFields();
   };
+
+  const handleCommentSubmit = async () => {
+    try {
+      const values = await commentForm.validateFields();
+      createCommentMutation.mutate(values.content.trim());
+    } catch {
+      message.error('请输入评论内容');
+    }
+  };
+
+  if (!hasValidTaskId) {
+    return (
+      <Alert
+        message="任务ID无效"
+        description="请确认访问链接是否正确。"
+        type="error"
+        showIcon
+        action={
+          <Button type="primary" onClick={() => navigate('/tasks')}>
+            返回任务列表
+          </Button>
+        }
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -127,6 +184,8 @@ export const TaskDetailPage: React.FC = () => {
 
   const statusInfo = getStatusConfig(task.status);
   const priorityInfo = getPriorityConfig(task.priority);
+  const commentsErrorMessage =
+    commentsError instanceof Error ? commentsError.message : '评论加载失败，请稍后重试';
 
   return (
     <div>
@@ -243,6 +302,83 @@ export const TaskDetailPage: React.FC = () => {
             </Text>
           </Descriptions.Item>
         </Descriptions>
+      </Card>
+
+      {/* 评论区 */}
+      <Card title={`评论 (${commentsData?.total ?? 0})`} style={{ marginTop: 16 }}>
+        <Form form={commentForm} layout="vertical">
+          <Form.Item
+            name="content"
+            label="发表评论"
+            rules={[
+              { required: true, message: '请输入评论内容' },
+              {
+                validator: (_, value: string | undefined) =>
+                  value && value.trim() ? Promise.resolve() : Promise.reject(new Error('请输入评论内容')),
+              },
+              { max: 2000, message: '评论内容不能超过 2000 字' },
+            ]}
+          >
+            <TextArea rows={3} placeholder="输入评论内容..." />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 16 }}>
+            <Button
+              type="primary"
+              onClick={handleCommentSubmit}
+              loading={createCommentMutation.isPending}
+            >
+              发布评论
+            </Button>
+          </Form.Item>
+        </Form>
+
+        {commentsLoading ? (
+          <Spin />
+        ) : isCommentsLoadError ? (
+          <Alert
+            message="评论加载失败"
+            description={commentsErrorMessage}
+            type="error"
+            showIcon
+            action={
+              <Button type="primary" size="small" loading={commentsFetching} onClick={refetchComments}>
+                重试
+              </Button>
+            }
+          />
+        ) : !commentsData || commentsData.items.length === 0 ? (
+          <Empty description="暂无评论" />
+        ) : (
+          <List
+            dataSource={commentsData.items}
+            itemLayout="horizontal"
+            pagination={{
+              current: commentPage,
+              pageSize: commentPageSize,
+              total: commentsData.total,
+              showSizeChanger: true,
+              pageSizeOptions: ['5', '10', '20'],
+              hideOnSinglePage: true,
+              onChange: (page, pageSize) => {
+                setCommentPage(page);
+                setCommentPageSize(pageSize);
+              },
+            }}
+            renderItem={(comment: TaskComment) => (
+              <List.Item>
+                <List.Item.Meta
+                  title={
+                    <Space size={8}>
+                      <Text strong>{comment.author?.username || `用户 ${comment.author_id}`}</Text>
+                      <Text type="secondary">{formatDateTime(comment.created_at)}</Text>
+                    </Space>
+                  }
+                  description={<Text style={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Text>}
+                />
+              </List.Item>
+            )}
+          />
+        )}
       </Card>
     </div>
   );

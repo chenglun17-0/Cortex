@@ -51,9 +51,13 @@ export interface Task {
 }
 
 export interface TaskUpdate {
-  status?: TaskStatus;
   title?: string;
-  description?: string;
+  description?: string | null;
+  type?: string | null;
+  priority?: string | null;
+  status?: TaskStatus;
+  branch_name?: string | null;
+  deadline?: string | null; // YYYY-MM-DD
 }
 
 export interface TaskCreate {
@@ -64,4 +68,24 @@ export interface TaskCreate {
   status?: TaskStatus; // 可选，默认为 TODO
   type?: string; // 任务类型: feature, bug, docs, fix, refactor, chore
   deadline?: string; // 截止日期 YYYY-MM-DD
+}
+
+export interface TaskComment {
+  id: number;
+  content: string;
+  task_id: number;
+  author_id: number;
+  author: {
+    id: number;
+    username: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskCommentListResponse {
+  items: TaskComment[];
+  total: number;
+  page: number;
+  page_size: number;
 }

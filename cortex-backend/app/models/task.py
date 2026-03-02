@@ -30,3 +30,24 @@ class Task(models.Model):
     class Meta:
         table = "tasks"
         ordering = ["-created_at"]  # 默认按创建时间倒序排列
+
+
+class TaskComment(models.Model):
+    id = fields.IntField(pk=True)
+    content = fields.TextField()
+
+    task = fields.ForeignKeyField(
+        "models.Task",
+        related_name="comments"
+    )
+    author = fields.ForeignKeyField(
+        "models.User",
+        related_name="task_comments"
+    )
+
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "task_comments"
+        ordering = ["-created_at", "-id"]

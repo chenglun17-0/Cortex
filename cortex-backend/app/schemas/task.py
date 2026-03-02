@@ -1,6 +1,6 @@
 from datetime import datetime, date
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, List
+from pydantic import BaseModel, Field
 
 
 def datetime_utc_now():
@@ -43,3 +43,35 @@ class TaskRead(TaskBase):
 
     class Config:
         from_attributes = True
+
+
+class TaskCommentAuthor(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
+
+
+class TaskCommentCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class TaskCommentRead(BaseModel):
+    id: int
+    content: str
+    task_id: int
+    author_id: int
+    author: TaskCommentAuthor
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TaskCommentListResponse(BaseModel):
+    items: List[TaskCommentRead]
+    total: int
+    page: int
+    page_size: int
