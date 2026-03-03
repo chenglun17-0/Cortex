@@ -23,6 +23,7 @@ class SimilarTaskItem(BaseModel):
     project_id: int
     similarity: float = Field(..., description="相似度 (0-1)")
     created_at: Optional[str] = None
+    recommendation: Optional[str] = None
 
 
 class SimilaritySearchResponse(BaseModel):

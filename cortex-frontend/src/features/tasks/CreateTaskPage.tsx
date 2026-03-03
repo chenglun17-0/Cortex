@@ -351,6 +351,21 @@ export const CreateTaskPage: React.FC = () => {
                             {item.priority}
                           </span>
                         </div>
+                        {item.recommendation && (
+                          <div
+                            style={{
+                              marginBottom: 6,
+                              padding: '6px 8px',
+                              background: '#f8fafc',
+                              borderRadius: 6,
+                              border: '1px solid #e2e8f0',
+                            }}
+                          >
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <strong>解决方案建议：</strong>{item.recommendation}
+                            </Text>
+                          </div>
+                        )}
                         <Button
                           type="link"
                           size="small"

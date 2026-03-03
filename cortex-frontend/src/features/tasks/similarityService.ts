@@ -13,6 +13,7 @@ export type SimilarTask = {
   project_id: number;
   similarity: number;
   created_at?: string;
+  recommendation?: string;
 };
 
 export type SimilaritySearchResponse = {

@@ -4,6 +4,10 @@
 提供任务语义相似度搜索功能：
 - POST /similarity/search - 搜索相似任务
 """
+import asyncio
+import logging
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Depends
 
 from app.services.vector_store import search_similar_tasks
@@ -12,9 +16,40 @@ from app.schemas.similarity import (
     SimilaritySearchResponse,
     SimilarTaskItem,
 )
+from app.models import TaskComment
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/similarity", tags=["similarity"])
+logger = logging.getLogger(__name__)
+
+
+def _normalize_text(value: str, max_length: int = 120) -> str:
+    text = " ".join(value.split())
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + "..."
+
+
+async def _build_recommendation(task_id: int, description: Optional[str]) -> Optional[str]:
+    segments: list[str] = []
+
+    if description and description.strip():
+        segments.append(_normalize_text(description, max_length=140))
+
+    comments = (
+        await TaskComment.filter(task_id=task_id)
+        .order_by("-created_at", "-id")
+        .limit(2)
+        .all()
+    )
+    for comment in comments:
+        if comment.content and comment.content.strip():
+            segments.append(_normalize_text(comment.content, max_length=100))
+
+    if not segments:
+        return None
+
+    return " / ".join(segments)
 
 
 @router.post("/search", response_model=SimilaritySearchResponse)
@@ -36,6 +71,25 @@ async def search_similar(
             threshold=request.threshold,
         )
 
+        recommendations = await asyncio.gather(
+            *[
+                _build_recommendation(
+                    task_id=r["task_id"],
+                    description=r.get("description"),
+                )
+                for r in results
+            ],
+            return_exceptions=True,
+        )
+
+        safe_recommendations = []
+        for recommendation in recommendations:
+            if isinstance(recommendation, Exception):
+                logger.warning("Failed to build recommendation: %s", recommendation)
+                safe_recommendations.append(None)
+            else:
+                safe_recommendations.append(recommendation)
+
         return SimilaritySearchResponse(
             success=True,
             query=request.text,
@@ -49,8 +103,9 @@ async def search_similar(
                     project_id=r["project_id"],
                     similarity=r["similarity"],
                     created_at=r["created_at"],
+                    recommendation=safe_recommendations[idx],
                 )
-                for r in results
+                for idx, r in enumerate(results)
             ],
             total=len(results),
         )
