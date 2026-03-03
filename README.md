@@ -116,8 +116,8 @@ ctx auth login
 Cortex 支持 MCP (Model Context Protocol)，允许 AI 工具（如 Claude Desktop）直接调用 Cortex CLI。
 
 ```bash
-# MCP 服务器已随 CLI 一起安装
-cortex-mcp --help
+# 通过 npm 包方式使用 MCP 服务器（推荐）
+npx @cortex/cli-mcp@latest
 
 # 配置 Claude Desktop（示例）
 # 编辑 ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -125,9 +125,8 @@ cortex-mcp --help
 # {
 #   "mcpServers": {
 #     "cortex": {
-#       "command": "python",
-#       "args": ["-m", "cortex_mcp.server"],
-#       "env": {"PYTHONPATH": "/path/to/cortex-backend"}
+#       "command": "npx",
+#       "args": ["@cortex/cli-mcp@latest"]
 #     }
 #   }
 # }
@@ -229,23 +228,22 @@ ctx tasks done
 
 #### 前端
 - ✅ 用户登录页面
-- ✅ 项目列表展示
-- ✅ 基础路由配置
-- ✅ React Query 状态管理集成
+- ✅ 工作台页面（任务/项目统计与快捷入口）
+- ✅ 项目列表与项目看板（拖拽、成员管理）
+- ✅ 任务列表（筛选、搜索）
+- ✅ 任务详情与评论（分页与发布）
+- ✅ 全局任务看板
+- ✅ 基础路由与 React Query 状态管理
 
 ### 🚧 开发中功能
 
-- 🚧 任务看板拖拽功能
-- 🚧 项目详情与成员管理
-- 🚧 任务详情与评论功能
 - 🚧 数据统计与报表
 
 ### 📝 规划中功能
 
-- 📝 AI 工单智能聚合 (语义查重、解决方案推荐)
-- 📝 AI 代码智能辅助 (自动生成文档、智能审查)
-- 📝 向量数据库集成 (pgvector)
-- 📝 Git 平台集成 (GitHub/GitLab)
+- 📝 AI 工单智能聚合增强（解决方案推荐）
+- 📝 AI 审查结果前端展示与协作闭环
+- 📝 Git 平台集成增强（Webhook/自动回流能力）
 - 📝 通知系统
 - 📝 团队协作功能增强
 
@@ -263,7 +261,7 @@ ctx tasks done
 - [docs/project.md](./docs/project.md) - 项目详细说明与技术选型
 - [docs/implementation.md](./docs/implementation.md) - 实现细节与目录结构说明
 - [docs/mcp-integration.md](./docs/mcp-integration.md) - MCP 服务器集成指南
-- [openspec/changes/add-mcp-server/](./openspec/changes/add-mcp-server/) - MCP 功能规格文档
+- [openspec/changes/refactor-mcp-to-npm/](./openspec/changes/refactor-mcp-to-npm/) - MCP 重构规格文档
 
 ## 🔒 安全注意事项
 
