@@ -2,6 +2,11 @@
 
 本文档旨在说明 Cortex 智能研发项目管理系统的项目目录结构、技术实现方案及其核心组件。
 
+## 0. 模块文档入口
+
+- 代码实现模块文档：[`docs/modules/README.md`](./modules/README.md)
+- 规则与约束文档：[`docs/rules/project.md`](./rules/project.md)
+
 ## 1. 项目概览
 
 Cortex 采用前后端分离的架构，并集成了专为开发者设计的 CLI 工具。项目结构如下：

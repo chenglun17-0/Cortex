@@ -2,11 +2,12 @@
 
 **Cortex 智能研发项目管理系统**
 
-## 文档索引（模块规则）
+## 文档索引
 
 - 模块总览：[docs/rules/project.md](./rules/project.md)
 - 业务配置规范：[docs/rules/业务规则配置规范.md](./rules/业务规则配置规范.md)
 - 模块拆分目录：[docs/rules/modules/README.md](./rules/modules/README.md)
+- 代码模块文档：[docs/modules/README.md](./modules/README.md)
 
 采用前后端分离架构，核心特色为 **“Web 管理端 + CLI 开发端”** 的双端协同。
 
