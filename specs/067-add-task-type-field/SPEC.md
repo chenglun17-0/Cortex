@@ -114,11 +114,11 @@ if not branch_name:
 
 ## 验收标准
 
-- [ ] 数据库添加 `type` 字段
-- [ ] Schema 支持 type 参数
-- [ ] 前端新建任务表单包含类型选择
-- [ ] CLI start 使用任务类型生成分支名
-- [ ] 分支命名正确（如 bug/task-1-abc123）
+- [x] 数据库添加 `type` 字段
+- [x] Schema 支持 type 参数
+- [x] 前端新建任务表单包含类型选择
+- [x] CLI start 使用任务类型生成分支名
+- [x] 分支命名正确（如 bug/task-1-abc123）
 
 ## 文件位置
 

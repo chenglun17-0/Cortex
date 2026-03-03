@@ -90,11 +90,11 @@ def generate_random_branch_name(task_id: int, branch_type: str = "feature") -> s
 
 ## 验收标准
 
-- [ ] 正则表达式支持多种分支类型
-- [ ] pr() 函数正确提取任务 ID
-- [ ] done() 函数正确提取任务 ID
-- [ ] generate_random_branch_name() 支持指定类型
-- [ ] 错误提示信息准确
+- [x] 正则表达式支持多种分支类型
+- [x] pr() 函数正确提取任务 ID
+- [x] done() 函数正确提取任务 ID
+- [x] generate_random_branch_name() 支持指定类型
+- [x] 错误提示信息准确
 
 ## 文件位置
 

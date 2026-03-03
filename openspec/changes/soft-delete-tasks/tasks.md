@@ -1,14 +1,14 @@
 ## 1. 后端开发
 
 ### 1.1 模型更新
-- [ ] 1.1.1 Task 模型添加 deleted_at 字段（datetime，可空）
+- [x] 1.1.1 Task 模型添加 deleted_at 字段（datetime，可空）
 
 ### 1.2 Schema 更新
-- [ ] 1.2.1 TaskRead 添加 deleted_at 字段
+- [x] 1.2.1 TaskRead 添加 deleted_at 字段
 
 ### 1.3 API 端点
-- [ ] 1.3.1 更新 DELETE /tasks/{id} 改为软删除
-- [ ] 1.3.2 查询任务时过滤 deleted_at不为空的记录
+- [x] 1.3.1 更新 DELETE /tasks/{id} 改为软删除
+- [x] 1.3.2 查询任务时过滤 deleted_at不为空的记录
 - [ ] 1.3.3 新增 POST /tasks/{id}/restore 恢复任务接口（可选）
 
 ## 2. 前端开发

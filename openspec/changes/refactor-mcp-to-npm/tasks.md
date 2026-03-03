@@ -25,8 +25,8 @@
 ## 5. Testing
 - [x] 5.1 编写 Tools 单元测试
 - [x] 5.2 测试 CLI 集成
-- [ ] 5.3 在 Claude Desktop 中测试
-- [ ] 5.4 在 Cline 中测试
+- [x] 5.3 在 Claude Desktop 中测试（已取消：MCP 功能已移除）
+- [x] 5.4 在 Cline 中测试（已取消：MCP 功能已移除）
 
 ## 6. Documentation
 - [x] 6.1 更新 docs/mcp-integration.md（npm 包配置）
@@ -35,8 +35,8 @@
 
 ## 7. Deployment
 - [x] 7.1 编译 TypeScript（tsc）
-- [ ] 7.2 发布到 npm（@cortex/cli-mcp）
-- [ ] 7.3 本地测试 npx 运行
+- [x] 7.2 发布到 npm（@cortex/cli-mcp）（已取消：MCP 功能已移除）
+- [x] 7.3 本地测试 npx 运行（已取消：MCP 功能已移除）
 
 ## 8. Cleanup
 - [x] 8.1 删除 Python MCP 实现（cortex-backend/cortex_mcp/）
@@ -45,9 +45,7 @@
 
 ---
 
-**状态**: 已完成本地开发，待本地测试
+**状态**: 已关闭（MCP 功能已移除，不再继续）
 
 **剩余任务**:
-- 本地测试 MCP 服务器
-- 在 Claude Desktop/Cline 中集成测试
-- 发布到 npm（可选）
+- 无
