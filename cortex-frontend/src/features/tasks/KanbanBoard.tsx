@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm } from 'antd';
 import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
@@ -9,9 +9,17 @@ import { getProjects, getProjectMembers, addProjectMember, removeProjectMember, 
 import { type Task, TaskStatus, type Project, type User } from '../../types';
 import { KanbanColumns } from '../../constants';
 import { getPriorityConfig } from '../../utils';
+import dayjs, { type Dayjs } from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+type CreateTaskFormValues = {
+    title: string;
+    type: string;
+    priority?: string;
+    deadline?: Dayjs;
+    description?: string;
+};
 
 // PriorityTag 组件 - 使用统一的优先级配置
 const PriorityTag: React.FC<{ priority?: string }> = ({ priority }) => {
@@ -31,7 +39,6 @@ export const KanbanBoard: React.FC = () => {
     const [memberDrawerOpen, setMemberDrawerOpen] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState('');
     const [form] = Form.useForm();
-    const searchInputRef = useRef<any>(null);
 
     const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
         queryKey: ['tasks', projectId],
@@ -112,7 +119,7 @@ export const KanbanBoard: React.FC = () => {
         }
     });
 
-    const handleCreate = (values: any) => {
+    const handleCreate = (values: CreateTaskFormValues) => {
         if (!projectId) return;
         createTaskMutation.mutate({
             ...values,
@@ -215,7 +222,6 @@ export const KanbanBoard: React.FC = () => {
                 <div style={{ marginBottom: 16 }}>
                     <Text strong style={{ display: 'block', marginBottom: 8 }}>添加成员</Text>
                     <Input
-                        ref={searchInputRef}
                         placeholder="搜索用户名..."
                         prefix={<SearchOutlined />}
                         value={searchKeyword}
@@ -430,9 +436,7 @@ export const KanbanBoard: React.FC = () => {
                             style={{ width: '100%', borderRadius: 6 }}
                             placeholder="选择截止日期"
                             format="YYYY-MM-DD"
-                            disabledDate={(current: any) => {
-                                return current && current < new Date();
-                            }}
+                            disabledDate={(current: Dayjs) => current.isBefore(dayjs())}
                         />
                     </Form.Item>
 

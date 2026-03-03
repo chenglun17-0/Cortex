@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from app.api.v1.endpoints import tasks as tasks_endpoint
 from app.schemas.task import TaskCommentCreate
@@ -45,6 +46,26 @@ class _FakeComment:
 
 
 class TaskCommentEndpointTests(unittest.IsolatedAsyncioTestCase):
+    async def test_get_task_comments_first_page_uses_zero_offset(self):
+        fake_qs = _FakeCommentQuerySet([])
+        current_user = SimpleNamespace(id=100)
+
+        with patch.object(tasks_endpoint, "_ensure_task_access", AsyncMock()) as ensure_access, patch.object(
+            tasks_endpoint.TaskComment, "filter", return_value=fake_qs
+        ):
+            result = await tasks_endpoint.get_task_comments(
+                task_id=10,
+                page=1,
+                page_size=10,
+                current_user=current_user,
+            )
+
+        ensure_access.assert_awaited_once_with(task_id=10, current_user=current_user)
+        self.assertEqual(fake_qs.offset_value, 0)
+        self.assertEqual(fake_qs.limit_value, 10)
+        self.assertEqual(result["items"], [])
+        self.assertEqual(result["total"], 0)
+
     async def test_get_task_comments_orders_by_newest_first(self):
         fake_comments = [SimpleNamespace(id=2), SimpleNamespace(id=1)]
         fake_qs = _FakeCommentQuerySet(fake_comments)
@@ -75,7 +96,7 @@ class TaskCommentEndpointTests(unittest.IsolatedAsyncioTestCase):
         current_user = SimpleNamespace(id=7)
         fake_comment = _FakeComment()
 
-        with patch.object(tasks_endpoint, "_ensure_task_access", AsyncMock()), patch.object(
+        with patch.object(tasks_endpoint, "_ensure_task_access", AsyncMock()) as ensure_access, patch.object(
             tasks_endpoint.TaskComment, "create", AsyncMock(return_value=fake_comment)
         ) as create_mock:
             result = await tasks_endpoint.create_task_comment(
@@ -84,6 +105,7 @@ class TaskCommentEndpointTests(unittest.IsolatedAsyncioTestCase):
                 current_user=current_user,
             )
 
+        ensure_access.assert_awaited_once_with(task_id=88, current_user=current_user)
         create_mock.assert_awaited_once_with(
             content="hello world",
             task_id=88,
@@ -95,7 +117,7 @@ class TaskCommentEndpointTests(unittest.IsolatedAsyncioTestCase):
     async def test_create_task_comment_rejects_blank_content(self):
         current_user = SimpleNamespace(id=7)
 
-        with patch.object(tasks_endpoint, "_ensure_task_access", AsyncMock()):
+        with patch.object(tasks_endpoint, "_ensure_task_access", AsyncMock()) as ensure_access:
             with self.assertRaises(HTTPException) as context:
                 await tasks_endpoint.create_task_comment(
                     task_id=88,
@@ -103,8 +125,13 @@ class TaskCommentEndpointTests(unittest.IsolatedAsyncioTestCase):
                     current_user=current_user,
                 )
 
+        ensure_access.assert_awaited_once_with(task_id=88, current_user=current_user)
         self.assertEqual(context.exception.status_code, 400)
         self.assertEqual(context.exception.detail, "Comment content cannot be empty")
+
+    def test_task_comment_create_rejects_content_longer_than_2000(self):
+        with self.assertRaises(ValidationError):
+            TaskCommentCreate(content="a" * 2001)
 
 
 if __name__ == "__main__":

@@ -53,8 +53,9 @@ export const ProjectsPage: React.FC = () => {
       message.success('项目已删除');
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || '删除失败，请先删除项目下的任务');
+    onError: (error: unknown) => {
+      const errorDetail = (error as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      message.error(errorDetail || '删除失败，请先删除项目下的任务');
     },
   });
 

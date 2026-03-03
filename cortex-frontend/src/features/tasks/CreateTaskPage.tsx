@@ -4,7 +4,7 @@ import {
   List, message, Space, Spin, Alert, Divider
 } from 'antd';
 import {
-  PlusOutlined, WarningOutlined, LinkOutlined, FileTextOutlined
+  WarningOutlined, LinkOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -13,10 +13,19 @@ import type { SimilarTask } from './similarityService';
 import { getProjects } from '../projects/service';
 import { createTask } from './service';
 import type { TaskCreate } from '../../types';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+type CreateTaskFormValues = {
+  title: string;
+  description?: string;
+  project_id: number;
+  priority?: string;
+  deadline?: Dayjs;
+  type?: string;
+};
 
 export const CreateTaskPage: React.FC = () => {
   const navigate = useNavigate();
@@ -92,12 +101,7 @@ export const CreateTaskPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [title, description, searchSimilar]);
 
-  // 手动触发搜索
-  const handleManualSearch = () => {
-    searchSimilar();
-  };
-
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: CreateTaskFormValues) => {
     const taskData: TaskCreate = {
       title: values.title,
       description: values.description || '',
@@ -117,17 +121,6 @@ export const CreateTaskPage: React.FC = () => {
       case 'HIGH': return 'red';
       case 'MEDIUM': return 'orange';
       case 'LOW': return 'green';
-      default: return 'default';
-    }
-  };
-
-  // 获取状态颜色
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'TODO': return 'default';
-      case 'IN_PROGRESS': return 'processing';
-      case 'REVIEW': return 'warning';
-      case 'DONE': return 'success';
       default: return 'default';
     }
   };

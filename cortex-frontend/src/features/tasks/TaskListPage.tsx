@@ -111,7 +111,7 @@ export const TaskListPage: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 180,
-      render: (_: any, record: Task) => (
+      render: (_: unknown, record: Task) => (
         <Space size="small">
           <Button
             type="link"

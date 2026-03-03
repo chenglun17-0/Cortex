@@ -12,7 +12,7 @@ export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
-    const onFinish = async (values: any) => {
+    const onFinish = async (values: { username: string; password: string }) => {
         setLoading (true);
         try {
             const formData = new FormData();
