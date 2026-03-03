@@ -2,18 +2,20 @@
 import { http } from '../../lib/http';
 import type { Task, TaskUpdate, TaskCreate, TaskComment, TaskCommentListResponse } from '../../types';
 
+const filterActiveTasks = (tasks: Task[]): Task[] => tasks.filter((task) => !task.deleted_at);
+
 // 获取指定项目的任务列表
 // 后端接口：GET /api/v1/tasks/project/{project_id}
 export const getTasksByProject = async (projectId: string): Promise<Task[]> => {
   const response = await http.get<Task[]>(`/tasks/project/${projectId}`);
-  return response.data;
+  return filterActiveTasks(response.data);
 };
 
 // 获取当前用户的任务列表
 // 后端接口：GET /api/v1/tasks/
 export const getMyTasks = async (): Promise<Task[]> => {
   const response = await http.get<Task[]>('/tasks/');
-  return response.data;
+  return filterActiveTasks(response.data);
 };
 
 // 更新任务（用于拖拽后保存状态）
@@ -49,5 +51,11 @@ export const getTaskComments = async (
 // 创建任务评论
 export const createTaskComment = async (taskId: number, content: string): Promise<TaskComment> => {
   const response = await http.post<TaskComment>(`/tasks/${taskId}/comments`, { content });
+  return response.data;
+};
+
+// 恢复软删除任务
+export const restoreTask = async (taskId: number): Promise<{ message: string }> => {
+  const response = await http.post<{ message: string }>(`/tasks/${taskId}/restore`);
   return response.data;
 };

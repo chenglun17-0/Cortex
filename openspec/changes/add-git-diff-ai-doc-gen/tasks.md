@@ -4,7 +4,7 @@
 
 ## 2. Configuration
 - [x] 2.1 Add AI config keys to `cli/config.py`
-- [ ] 2.2 Add config validation logic
+- [x] 2.2 Add config validation logic
 
 ## 3. Git Operations
 - [x] 3.1 Add `get_diff()` function to `cli/git.py`
@@ -30,6 +30,6 @@
 - [x] 6.2 Add CLI help text for new config options
 
 ## 7. Testing
-- [ ] 7.1 Test with mock AI service (no API key)
+- [x] 7.1 Test with mock AI service (no API key)
 - [ ] 7.2 Test with real OpenAI API
-- [ ] 7.3 Test edge cases (empty diff, large diff, timeout)
+- [x] 7.3 Test edge cases (empty diff, large diff, timeout)

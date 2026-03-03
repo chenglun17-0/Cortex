@@ -46,6 +46,7 @@ export interface Task {
   assignee_id?: number;
   project_id: number;
   branch_name?: string;
+  deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

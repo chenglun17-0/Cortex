@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,6 +16,7 @@ from app.models import Task, User, Project, ProjectMember, TaskComment
 from app.services.vector_store import upsert_task_embedding, delete_task_embedding
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 async def _is_project_member(project_id: int, user_id: int) -> bool:
@@ -49,6 +51,30 @@ async def _ensure_task_access(task_id: int, current_user: User) -> Task:
     project = await Project.get_or_none(id=task.project_id, deleted_at__isnull=True)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.owner_id == current_user.id:
+        return task
+
+    if await _is_project_member(project_id=task.project_id, user_id=current_user.id):
+        return task
+
+    raise HTTPException(status_code=403, detail="No access to task")
+
+
+async def _ensure_task_restore_access(task_id: int, current_user: User) -> Task:
+    """
+    校验恢复任务访问权限：任务需存在（可已软删除），且当前用户有访问权限
+    """
+    task = await Task.get_or_none(id=task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    project = await Project.get_or_none(id=task.project_id, deleted_at__isnull=True)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if task.assignee_id == current_user.id:
+        return task
 
     if project.owner_id == current_user.id:
         return task
@@ -142,6 +168,32 @@ async def delete_task(
     await delete_task_embedding(task_id)
 
     return {"message": "Task deleted successfully"}
+
+
+@router.post("/{task_id}/restore")
+async def restore_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    恢复软删除任务（将 deleted_at 重置为 null）
+    """
+    task = await _ensure_task_restore_access(task_id=task_id, current_user=current_user)
+
+    if task.deleted_at is None:
+        raise HTTPException(status_code=400, detail="Task is not deleted")
+
+    task.deleted_at = None
+    await task.save()
+
+    # 恢复任务向量
+    text_content = f"{task.title}\n{task.description or ''}"
+    try:
+        await upsert_task_embedding(task.id, text_content)
+    except Exception as exc:
+        logger.warning("Failed to rebuild embedding after restore (task_id=%s): %s", task.id, exc)
+
+    return {"message": "Task restored successfully"}
 
 
 @router.patch("/{task_id}", response_model=TaskRead)
