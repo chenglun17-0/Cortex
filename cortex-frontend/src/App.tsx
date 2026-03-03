@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { LoginPage } from './features/auth/LoginPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { AnalyticsPage } from './features/dashboard/AnalyticsPage';
 import { KanbanBoard } from './features/tasks/KanbanBoard';
 import { TaskListPage } from './features/tasks/TaskListPage';
 import { TaskDetailPage } from './features/tasks/TaskDetailPage';
@@ -34,6 +35,7 @@ const App: React.FC = () => {
         <Route element={<PrivateRoute />}>
           <Route element={<MainLayout><Outlet /></MainLayout>}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId" element={<KanbanBoard />} />
             <Route path="/tasks" element={<TaskListPage />} />

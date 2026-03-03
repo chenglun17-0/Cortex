@@ -10,6 +10,7 @@ import {
   CheckSquareOutlined,
   BorderlessTableOutlined,
   PlusSquareOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -63,6 +64,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: '/board',
       icon: <BorderlessTableOutlined />,
       label: '任务看板',
+    },
+    {
+      key: '/analytics',
+      icon: <BarChartOutlined />,
+      label: '数据报表',
     },
     {
       key: '/projects',
