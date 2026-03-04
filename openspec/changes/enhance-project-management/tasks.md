@@ -35,5 +35,5 @@
 
 ## 3. 测试与验证
 - [x] 3.1 API 接口测试
-- [ ] 3.2 前端功能测试
+- [x] 3.2 前端功能测试（`node scripts/test-project-management-frontend.mjs`）
 - [x] 3.3 更新 project.md 文档
