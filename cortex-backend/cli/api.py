@@ -16,10 +16,13 @@ class APIClient:
         headers = {"Authorization": f"Bearer {self.token}"}
         return requests.get(f"{self.api_url}{endpoint}", headers=headers)
 
-    def post(self, endpoint: str, json_data: dict):
+    def post(self, endpoint: str, json_data: dict, timeout=None):
         """发送 POST 请求"""
         headers = {"Authorization": f"Bearer {self.token}"}
-        return requests.post(f"{self.api_url}{endpoint}", headers=headers, json=json_data)
+        kwargs = {"headers": headers, "json": json_data}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        return requests.post(f"{self.api_url}{endpoint}", **kwargs)
 
     def patch(self, endpoint: str, json_data: dict):
         """发送 PATCH 请求"""

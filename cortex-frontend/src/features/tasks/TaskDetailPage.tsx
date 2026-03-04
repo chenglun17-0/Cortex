@@ -35,6 +35,46 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+const AI_REVIEW_HEADER = '## AI 代码审查结果';
+const AI_REVIEW_SCORE_PATTERN = /\*\*评分\*\*:\s*(\d{1,3})\s*\/\s*100/;
+const AI_REVIEW_SUMMARY_PATTERN = /\*\*摘要\*\*:\s*(.+)/;
+
+interface ParsedAiReview {
+  createdAt: string;
+  score: number | null;
+  summary: string;
+}
+
+const parseAiReviewComment = (comment: TaskComment): ParsedAiReview | null => {
+  const content = comment.content || '';
+  if (!content.includes(AI_REVIEW_HEADER)) {
+    return null;
+  }
+
+  const scoreMatch = content.match(AI_REVIEW_SCORE_PATTERN);
+  const score = scoreMatch ? Number(scoreMatch[1]) : null;
+  const summaryMatch = content.match(AI_REVIEW_SUMMARY_PATTERN);
+
+  return {
+    createdAt: comment.created_at,
+    score: Number.isFinite(score) ? score : null,
+    summary: summaryMatch?.[1]?.trim() || '未提供摘要',
+  };
+};
+
+const getAiReviewStatus = (score: number | null): { label: string; color: string } => {
+  if (score === null) {
+    return { label: '未知', color: 'default' };
+  }
+  if (score >= 90) {
+    return { label: '优秀', color: 'success' };
+  }
+  if (score >= 75) {
+    return { label: '良好', color: 'processing' };
+  }
+  return { label: '需关注', color: 'warning' };
+};
+
 export const TaskDetailPage: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const parsedTaskId = Number(taskId);
@@ -70,6 +110,27 @@ export const TaskDetailPage: React.FC = () => {
     queryFn: () => getTaskComments(parsedTaskId, commentPage, commentPageSize),
     enabled: hasValidTaskId && isTaskLoaded,
   });
+  const { data: aiReviewCommentsData } = useQuery({
+    queryKey: ['task-ai-review-comments', parsedTaskId],
+    queryFn: () => getTaskComments(parsedTaskId, 1, 50),
+    enabled: hasValidTaskId && isTaskLoaded,
+  });
+  const latestAiReview = useMemo(() => {
+    const parsedReviews = (aiReviewCommentsData?.items ?? [])
+      .map(parseAiReviewComment)
+      .filter((item): item is ParsedAiReview => item !== null);
+
+    if (parsedReviews.length === 0) {
+      return null;
+    }
+
+    return parsedReviews.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+  }, [aiReviewCommentsData?.items]);
+  const aiReviewStatus = getAiReviewStatus(latestAiReview?.score ?? null);
+  const commentsErrorMessage =
+    commentsError instanceof Error ? commentsError.message : '评论加载失败，请稍后重试';
 
   // 创建项目ID到项目名称的映射
   const projectNameMap = useMemo(() => {
@@ -103,6 +164,7 @@ export const TaskDetailPage: React.FC = () => {
       commentForm.resetFields();
       setCommentPage(1);
       queryClient.invalidateQueries({ queryKey: ['task-comments', parsedTaskId] });
+      queryClient.invalidateQueries({ queryKey: ['task-ai-review-comments', parsedTaskId] });
     },
     onError: () => {
       message.error('评论发布失败');
@@ -184,8 +246,6 @@ export const TaskDetailPage: React.FC = () => {
 
   const statusInfo = getStatusConfig(task.status);
   const priorityInfo = getPriorityConfig(task.priority);
-  const commentsErrorMessage =
-    commentsError instanceof Error ? commentsError.message : '评论加载失败，请稍后重试';
 
   return (
     <div>
@@ -306,6 +366,27 @@ export const TaskDetailPage: React.FC = () => {
 
       {/* 评论区 */}
       <Card title={`评论 (${commentsData?.total ?? 0})`} style={{ marginTop: 16 }}>
+        <Card title="PR 审查状态" size="small" type="inner" style={{ marginBottom: 16 }}>
+          {latestAiReview ? (
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label="状态">
+                <Tag color={aiReviewStatus.color}>{aiReviewStatus.label}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="评分">
+                {latestAiReview.score !== null ? `${latestAiReview.score}/100` : '未提供'}
+              </Descriptions.Item>
+              <Descriptions.Item label="摘要">
+                <Text style={{ whiteSpace: 'pre-wrap' }}>{latestAiReview.summary}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="更新时间">
+                {formatDateTime(latestAiReview.createdAt)}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无审查结果" />
+          )}
+        </Card>
+
         <Form form={commentForm} layout="vertical">
           <Form.Item
             name="content"
