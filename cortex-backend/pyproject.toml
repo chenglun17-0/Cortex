@@ -48,3 +48,6 @@ include = ["cli*", "app*"] # 包含 cli、app 包
 tortoise_orm = "app.db.TORTOISE_ORM"
 location = "./migrations"
 src_folder = "./."
+
+[tool.uv]
+required-environments = ["sys_platform == 'darwin' and platform_machine == 'x86_64'"]

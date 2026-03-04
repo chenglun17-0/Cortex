@@ -1,6 +1,6 @@
 ## 1. Dependencies
 - [x] 1.1 Add AI dependencies to `pyproject.toml`
-- [ ] 1.2 Run `uv sync` to install new packages
+- [x] 1.2 Run `uv sync` to install new packages
 
 ## 2. Configuration
 - [x] 2.1 Add AI config keys to `cli/config.py`
