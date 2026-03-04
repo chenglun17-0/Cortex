@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm } from 'antd';
+import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm, Alert } from 'antd';
 import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
 import { getProjects, getProjectMembers, addProjectMember, removeProjectMember, searchUsers } from '../projects/service';
+import { searchSimilarTasks } from './similarityService';
 import { type Task, TaskStatus, type Project, type User } from '../../types';
 import { KanbanColumns } from '../../constants';
 import { getPriorityConfig } from '../../utils';
@@ -19,6 +20,12 @@ type CreateTaskFormValues = {
     priority?: string;
     deadline?: Dayjs;
     description?: string;
+};
+
+type SimilarTaskItem = {
+    task_id: number;
+    title: string;
+    similarity: number;
 };
 
 // PriorityTag 组件 - 使用统一的优先级配置
@@ -38,6 +45,13 @@ export const KanbanBoard: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [memberDrawerOpen, setMemberDrawerOpen] = useState(false);
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [draftTitle, setDraftTitle] = useState('');
+    const [draftDescription, setDraftDescription] = useState('');
+    const [similarTasks, setSimilarTasks] = useState<SimilarTaskItem[]>([]);
+    const [isSearchingSimilar, setIsSearchingSimilar] = useState(false);
+    const [searchTriggered, setSearchTriggered] = useState(false);
+    const [similarSearchError, setSimilarSearchError] = useState<string | null>(null);
+    const similarSearchSeqRef = useRef(0);
     const [form] = Form.useForm();
 
     const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
@@ -112,12 +126,75 @@ export const KanbanBoard: React.FC = () => {
             message.success('任务创建成功');
             setIsModalOpen(false);
             form.resetFields();
+            setDraftTitle('');
+            setDraftDescription('');
+            setSimilarTasks([]);
+            setSearchTriggered(false);
+            setSimilarSearchError(null);
             queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
         },
         onError: () => {
             message.error('创建失败');
         }
     });
+
+    const searchSimilar = useCallback(
+        async (title: string, description: string) => {
+            const trimmedTitle = title.trim();
+            if (trimmedTitle.length < 3) {
+                similarSearchSeqRef.current += 1;
+                setSimilarTasks([]);
+                setSearchTriggered(false);
+                setSimilarSearchError(null);
+                return;
+            }
+
+            const currentSeq = similarSearchSeqRef.current + 1;
+            similarSearchSeqRef.current = currentSeq;
+
+            setIsSearchingSimilar(true);
+            setSearchTriggered(true);
+            setSimilarSearchError(null);
+
+            try {
+                const text = `${trimmedTitle}\n${description.trim()}`;
+                const response = await searchSimilarTasks({
+                    text,
+                    limit: 3,
+                    threshold: 0.5,
+                });
+                if (currentSeq !== similarSearchSeqRef.current) {
+                    return;
+                }
+                setSimilarTasks(response.success ? response.results : []);
+            } catch {
+                if (currentSeq !== similarSearchSeqRef.current) {
+                    return;
+                }
+                setSimilarTasks([]);
+                setSimilarSearchError('语义查重失败，请稍后重试');
+            } finally {
+                if (currentSeq === similarSearchSeqRef.current) {
+                    setIsSearchingSimilar(false);
+                }
+            }
+        },
+        [],
+    );
+
+    useEffect(() => {
+        if (!isModalOpen) {
+            similarSearchSeqRef.current += 1;
+            setIsSearchingSimilar(false);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            searchSimilar(draftTitle, draftDescription);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [isModalOpen, draftTitle, draftDescription, searchSimilar]);
 
     const handleCreate = (values: CreateTaskFormValues) => {
         if (!projectId) return;
@@ -141,6 +218,16 @@ export const KanbanBoard: React.FC = () => {
     const handleRemoveMember = (userId: number) => {
         if (!projectId) return;
         removeMemberMutation.mutate({ projectId: Number(projectId), userId });
+    };
+
+    const openCreateTaskModal = () => {
+        form.resetFields();
+        setDraftTitle('');
+        setDraftDescription('');
+        setSimilarTasks([]);
+        setSearchTriggered(false);
+        setSimilarSearchError(null);
+        setIsModalOpen(true);
     };
 
     const tasksByStatus = useMemo(() => {
@@ -202,11 +289,11 @@ export const KanbanBoard: React.FC = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={openCreateTaskModal}
                         size="large"
                         style={{ borderRadius: 8 }}
                     >
-                        新建任务
+                        创建任务
                     </Button>
                 </Space>
             </div>
@@ -384,17 +471,34 @@ export const KanbanBoard: React.FC = () => {
                 </div>
             </DragDropContext>
 
-            {/* 新建任务弹窗 */}
+            {/* 创建任务弹窗 */}
             <Modal
-                title="新建任务"
+                title="创建任务"
                 open={isModalOpen}
                 onOk={() => form.submit()}
-                onCancel={() => setIsModalOpen(false)}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    form.resetFields();
+                    setDraftTitle('');
+                    setDraftDescription('');
+                    setSimilarTasks([]);
+                    setSearchTriggered(false);
+                    setSimilarSearchError(null);
+                }}
                 confirmLoading={createTaskMutation.isPending}
-                okButtonProps={{ style: { borderRadius: 6 } }}
-                cancelButtonProps={{ style: { borderRadius: 6 } }}
+                okText="创建"
+                cancelText="取消"
             >
-                <Form form={form} layout="vertical" onFinish={handleCreate}>
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleCreate}
+                    initialValues={{ type: 'feature', priority: 'MEDIUM' }}
+                    onValuesChange={(_, values) => {
+                        setDraftTitle(values.title || '');
+                        setDraftDescription(values.description || '');
+                    }}
+                >
                     <Form.Item
                         name="title"
                         label="任务标题"
@@ -406,7 +510,6 @@ export const KanbanBoard: React.FC = () => {
                     <Form.Item
                         name="type"
                         label="任务类型"
-                        initialValue="feature"
                         rules={[{ required: true, message: '请选择任务类型' }]}
                     >
                         <Select style={{ borderRadius: 6 }}>
@@ -419,30 +522,68 @@ export const KanbanBoard: React.FC = () => {
                         </Select>
                     </Form.Item>
 
-                    <Form.Item name="priority" label="优先级" initialValue="MEDIUM">
+                    <Form.Item name="priority" label="优先级">
                         <Select style={{ borderRadius: 6 }}>
-                            <Option value="HIGH">高 (High)</Option>
-                            <Option value="MEDIUM">中 (Medium)</Option>
-                            <Option value="LOW">低 (Low)</Option>
+                            <Option value="HIGH">高</Option>
+                            <Option value="MEDIUM">中</Option>
+                            <Option value="LOW">低</Option>
                         </Select>
                     </Form.Item>
 
-                    <Form.Item
-                        name="deadline"
-                        label="截止日期"
-                        rules={[{ required: true, message: '请选择截止日期' }]}
-                    >
+                    <Form.Item name="deadline" label="截止日期">
                         <DatePicker
                             style={{ width: '100%', borderRadius: 6 }}
                             placeholder="选择截止日期"
                             format="YYYY-MM-DD"
-                            disabledDate={(current: Dayjs) => current.isBefore(dayjs())}
+                            disabledDate={(current: Dayjs) => current && current < dayjs().startOf('day')}
                         />
                     </Form.Item>
 
                     <Form.Item name="description" label="详细描述">
                         <Input.TextArea rows={4} placeholder="输入任务描述..." style={{ borderRadius: 6 }} />
                     </Form.Item>
+
+                    {isSearchingSimilar ? (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                            <Spin size="small" />
+                            <span style={{ color: '#64748b' }}>正在进行语义查重...</span>
+                        </div>
+                    ) : searchTriggered && similarTasks.length > 0 ? (
+                        <Alert
+                            style={{ marginTop: 8 }}
+                            type="warning"
+                            showIcon
+                            message={`发现 ${similarTasks.length} 个相似任务，请确认是否重复`}
+                            description={(
+                                <List
+                                    size="small"
+                                    dataSource={similarTasks}
+                                    renderItem={(item) => (
+                                        <List.Item style={{ paddingInline: 0 }}>
+                                            <a onClick={() => navigate(`/tasks/${item.task_id}`)}>
+                                                #{item.task_id} {item.title}
+                                            </a>
+                                            <Tag color="orange">{Math.round(item.similarity * 100)}%</Tag>
+                                        </List.Item>
+                                    )}
+                                />
+                            )}
+                        />
+                    ) : similarSearchError ? (
+                        <Alert
+                            style={{ marginTop: 8 }}
+                            type="error"
+                            showIcon
+                            message={similarSearchError}
+                        />
+                    ) : searchTriggered ? (
+                        <Alert
+                            style={{ marginTop: 8 }}
+                            type="success"
+                            showIcon
+                            message="未发现明显重复任务"
+                        />
+                    ) : null}
                 </Form>
             </Modal>
         </div>

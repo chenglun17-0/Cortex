@@ -1,17 +1,37 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Card, Spin, Tag, Select, Space, Breadcrumb } from 'antd';
+import { Typography, Card, Spin, Tag, Select, Space, Breadcrumb, Button, Modal, Form, Input, DatePicker, message, Alert, List } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMyTasks, updateTask } from './service';
+import { getMyTasks, updateTask, createTask } from './service';
 import { getProjects } from '../projects/service';
+import { searchSimilarTasks } from './similarityService';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
 import { TaskStatus, KanbanColumns } from '../../constants';
 import { getPriorityConfig } from '../../utils';
+import dayjs, { type Dayjs } from 'dayjs';
 
 const { Title } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
+
+type CreateTaskFormValues = {
+  title: string;
+  description?: string;
+  project_id: number;
+  priority?: string;
+  deadline?: Dayjs;
+  type?: string;
+};
+
+type SimilarTaskItem = {
+  task_id: number;
+  title: string;
+  similarity: number;
+  project_id: number;
+};
 
 // PriorityTag 组件 - 使用统一的优先级配置
 const PriorityTag: React.FC<{ priority?: string }> = ({ priority }) => {
@@ -26,7 +46,16 @@ const PriorityTag: React.FC<{ priority?: string }> = ({ priority }) => {
 export const TaskBoardPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [form] = Form.useForm();
   const [projectFilter, setProjectFilter] = useState<number | 'ALL'>('ALL');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftDescription, setDraftDescription] = useState('');
+  const [similarTasks, setSimilarTasks] = useState<SimilarTaskItem[]>([]);
+  const [isSearchingSimilar, setIsSearchingSimilar] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState(false);
+  const [similarSearchError, setSimilarSearchError] = useState<string | null>(null);
+  const similarSearchSeqRef = useRef(0);
 
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
     queryKey: ['myTasks'],
@@ -54,6 +83,25 @@ export const TaskBoardPage: React.FC = () => {
       updateTask(id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTasks'] });
+    },
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: createTask,
+    onSuccess: () => {
+      message.success('任务创建成功');
+      setIsCreateModalOpen(false);
+      form.resetFields();
+      setDraftTitle('');
+      setDraftDescription('');
+      setSimilarTasks([]);
+      setSearchTriggered(false);
+      setSimilarSearchError(null);
+      queryClient.invalidateQueries({ queryKey: ['myTasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: () => {
+      message.error('创建失败');
     },
   });
 
@@ -104,6 +152,89 @@ export const TaskBoardPage: React.FC = () => {
     navigate(`/projects/${projectId}`);
   };
 
+  const searchSimilar = useCallback(
+    async (title: string, description: string) => {
+      const trimmedTitle = title.trim();
+      if (trimmedTitle.length < 3) {
+        similarSearchSeqRef.current += 1;
+        setSimilarTasks([]);
+        setSearchTriggered(false);
+        setSimilarSearchError(null);
+        return;
+      }
+
+      const currentSeq = similarSearchSeqRef.current + 1;
+      similarSearchSeqRef.current = currentSeq;
+
+      setIsSearchingSimilar(true);
+      setSearchTriggered(true);
+      setSimilarSearchError(null);
+
+      try {
+        const text = `${trimmedTitle}\n${description.trim()}`;
+        const response = await searchSimilarTasks({
+          text,
+          limit: 3,
+          threshold: 0.5,
+        });
+        if (currentSeq !== similarSearchSeqRef.current) {
+          return;
+        }
+        setSimilarTasks(response.success ? response.results : []);
+      } catch {
+        if (currentSeq !== similarSearchSeqRef.current) {
+          return;
+        }
+        setSimilarTasks([]);
+        setSimilarSearchError('语义查重失败，请稍后重试');
+      } finally {
+        if (currentSeq === similarSearchSeqRef.current) {
+          setIsSearchingSimilar(false);
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isCreateModalOpen) {
+      similarSearchSeqRef.current += 1;
+      setIsSearchingSimilar(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      searchSimilar(draftTitle, draftDescription);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [isCreateModalOpen, draftTitle, draftDescription, searchSimilar]);
+
+  const openCreateTaskModal = () => {
+    if (projectFilter !== 'ALL') {
+      form.setFieldsValue({ project_id: projectFilter });
+    } else {
+      form.resetFields();
+    }
+    setDraftTitle('');
+    setDraftDescription('');
+    setSimilarTasks([]);
+    setSearchTriggered(false);
+    setSimilarSearchError(null);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateTask = (values: CreateTaskFormValues) => {
+    createTaskMutation.mutate({
+      title: values.title,
+      description: values.description || '',
+      project_id: values.project_id,
+      priority: values.priority || 'MEDIUM',
+      type: values.type || 'feature',
+      deadline: values.deadline?.format('YYYY-MM-DD'),
+      status: TaskStatus.TODO,
+    });
+  };
+
   if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
 
   return (
@@ -138,6 +269,15 @@ export const TaskBoardPage: React.FC = () => {
               );
             })}
           </Select>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreateTaskModal}
+            size="large"
+            style={{ borderRadius: 8 }}
+          >
+            创建任务
+          </Button>
         </Space>
       </div>
 
@@ -232,6 +372,137 @@ export const TaskBoardPage: React.FC = () => {
           ))}
         </div>
       </DragDropContext>
+
+      <Modal
+        title="创建任务"
+        open={isCreateModalOpen}
+        onOk={() => form.submit()}
+        onCancel={() => {
+          setIsCreateModalOpen(false);
+          form.resetFields();
+          setDraftTitle('');
+          setDraftDescription('');
+          setSimilarTasks([]);
+          setSearchTriggered(false);
+          setSimilarSearchError(null);
+        }}
+        confirmLoading={createTaskMutation.isPending}
+        okText="创建"
+        cancelText="取消"
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateTask}
+          initialValues={{ type: 'feature', priority: 'MEDIUM' }}
+          onValuesChange={(_, values) => {
+            setDraftTitle(values.title || '');
+            setDraftDescription(values.description || '');
+          }}
+        >
+          <Form.Item
+            name="title"
+            label="任务标题"
+            rules={[{ required: true, message: '请输入任务标题' }]}
+          >
+            <Input placeholder="例如：实现登录接口" />
+          </Form.Item>
+
+          <Form.Item
+            name="project_id"
+            label="所属项目"
+            rules={[{ required: true, message: '请选择所属项目' }]}
+          >
+            <Select placeholder="选择项目">
+              {projects.map((project: Project) => (
+                <Option key={project.id} value={project.id}>
+                  {project.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="type"
+            label="任务类型"
+            rules={[{ required: true, message: '请选择任务类型' }]}
+          >
+            <Select>
+              <Option value="feature">新功能 (feature)</Option>
+              <Option value="bug">Bug 修复 (bug)</Option>
+              <Option value="docs">文档更新 (docs)</Option>
+              <Option value="fix">修复 (fix)</Option>
+              <Option value="chore">构建 (chore)</Option>
+              <Option value="refactor">重构 (refactor)</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="priority"
+            label="优先级"
+            rules={[{ required: true, message: '请选择优先级' }]}
+          >
+            <Select>
+              <Option value="HIGH">高</Option>
+              <Option value="MEDIUM">中</Option>
+              <Option value="LOW">低</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="deadline" label="截止日期">
+            <DatePicker
+              style={{ width: '100%' }}
+              disabledDate={(current) => current && current < dayjs().startOf('day')}
+            />
+          </Form.Item>
+
+          <Form.Item name="description" label="任务描述">
+            <TextArea rows={4} placeholder="输入任务描述..." />
+          </Form.Item>
+
+          {isSearchingSimilar ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+              <Spin size="small" />
+              <span style={{ color: '#64748b' }}>正在进行语义查重...</span>
+            </div>
+          ) : searchTriggered && similarTasks.length > 0 ? (
+            <Alert
+              style={{ marginTop: 8 }}
+              type="warning"
+              showIcon
+              message={`发现 ${similarTasks.length} 个相似任务，请确认是否重复`}
+              description={(
+                <List
+                  size="small"
+                  dataSource={similarTasks}
+                  renderItem={(item) => (
+                    <List.Item style={{ paddingInline: 0 }}>
+                      <a onClick={() => navigate(`/tasks/${item.task_id}`)}>
+                        #{item.task_id} {item.title}
+                      </a>
+                      <Tag color="orange">{Math.round(item.similarity * 100)}%</Tag>
+                    </List.Item>
+                  )}
+                />
+              )}
+            />
+          ) : similarSearchError ? (
+            <Alert
+              style={{ marginTop: 8 }}
+              type="error"
+              showIcon
+              message={similarSearchError}
+            />
+          ) : searchTriggered ? (
+            <Alert
+              style={{ marginTop: 8 }}
+              type="success"
+              showIcon
+              message="未发现明显重复任务"
+            />
+          ) : null}
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -26,11 +26,11 @@
 | `/login` | `features/auth/LoginPage` | 登录页（公开） |
 | `/` | `features/dashboard/DashboardPage` | 工作台 |
 | `/projects` | `features/projects/ProjectsPage` | 项目列表 |
-| `/projects/:projectId` | `features/tasks/KanbanBoard` | 项目看板 + 成员管理 |
+| `/projects/:projectId` | `features/tasks/KanbanBoard` | 项目看板 + 成员管理 + 创建任务弹窗（含语义查重） |
 | `/tasks` | `features/tasks/TaskListPage` | 我的任务列表 |
 | `/tasks/:taskId` | `features/tasks/TaskDetailPage` | 任务详情 + 评论 |
 | `/tasks/new` | `features/tasks/CreateTaskPage` | 创建任务 + 相似任务检测 |
-| `/board` | `features/tasks/TaskBoardPage` | 全局任务看板 |
+| `/board` | `features/tasks/TaskBoardPage` | 全局任务看板 + 创建任务弹窗（含语义查重） |
 | `/profile` | `features/auth/ProfilePage` | 个人中心 |
 
 ## 4. 数据流（React Query）
