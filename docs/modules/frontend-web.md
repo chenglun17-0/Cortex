@@ -33,7 +33,7 @@
 | `/board` | `features/tasks/TaskBoardPage` | 全局任务看板 + 创建任务弹窗（含语义查重） |
 | `/profile` | `features/auth/ProfilePage` | 个人中心 |
 
-补充说明：`/board` 与 `/projects/:projectId` 的创建任务弹窗均支持语义查重结果直达任务详情；全局看板（`/board`）中的任务卡片支持键盘 `Enter` 触发跳转。
+补充说明：`/board` 与 `/projects/:projectId` 的创建任务弹窗均支持语义查重结果直达任务详情；全局看板（`/board`）中的任务卡片支持键盘 `Enter` 触发跳转。若语义查重服务暂不可用，页面显示 warning 提示但不阻塞任务创建。
 
 ## 4. 数据流（React Query）
 

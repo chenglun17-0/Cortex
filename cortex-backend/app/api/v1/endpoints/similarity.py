@@ -8,7 +8,9 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+import asyncpg
+from fastapi import APIRouter, Depends
+from fastapi import HTTPException
 
 from app.services.vector_store import search_similar_tasks
 from app.schemas.similarity import (
@@ -110,9 +112,25 @@ async def search_similar(
             total=len(results),
         )
     except RuntimeError as e:
-        # embedding 生成失败
-        raise HTTPException(status_code=503, detail=f"AI 服务暂时不可用: {str(e)}")
+        logger.warning("Similarity search degraded: %s", e)
+        return SimilaritySearchResponse(
+            success=False,
+            query=request.text,
+            results=[],
+            total=0,
+            message="语义查重服务暂不可用，不影响继续创建任务",
+        )
+    except (asyncpg.PostgresError, OSError, ConnectionError) as e:
+        logger.warning("Similarity search degraded due to infra dependency: %s", e)
+        return SimilaritySearchResponse(
+            success=False,
+            query=request.text,
+            results=[],
+            total=0,
+            message="语义查重依赖暂不可用，不影响继续创建任务",
+        )
     except Exception as e:
+        logger.exception("Similarity search failed: %s", e)
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
 
 

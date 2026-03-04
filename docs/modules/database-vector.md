@@ -17,6 +17,7 @@
 | `app/db.py:TORTOISE_ORM` | ORM 配置常量（被 Aerich 与应用启动复用） |
 | `app/services/vector_store.py:init_pgvector()` | 初始化 `task_embeddings` 表与向量索引 |
 | `app/services/vector_store.py:search_similar_tasks()` | 余弦距离检索相似任务 |
+| `app/api/v1/endpoints/similarity.py:search_similar()` | 语义查重 API（异常时降级返回 `success=false`，不阻塞创建流程） |
 
 ## 3. 主要数据链路
 

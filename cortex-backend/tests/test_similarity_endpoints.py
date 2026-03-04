@@ -2,6 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+from fastapi import HTTPException
 from app.api.v1.endpoints import similarity as similarity_endpoint
 from app.schemas.similarity import SimilaritySearchRequest
 
@@ -96,6 +97,46 @@ class SimilarityEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.total, 1)
         self.assertEqual(response.results[0].task_id, 11)
         self.assertIsNone(response.results[0].recommendation)
+
+    async def test_search_similar_degrades_when_embedding_service_unavailable(self):
+        current_user = SimpleNamespace(id=1)
+        request = SimilaritySearchRequest(text="登录失败", limit=2, threshold=0.5)
+
+        with patch.object(
+            similarity_endpoint, "search_similar_tasks", AsyncMock(side_effect=RuntimeError("model unavailable"))
+        ):
+            response = await similarity_endpoint.search_similar(request=request, current_user=current_user)
+
+        self.assertFalse(response.success)
+        self.assertEqual(response.total, 0)
+        self.assertEqual(response.results, [])
+        self.assertIn("暂不可用", response.message or "")
+
+    async def test_search_similar_degrades_on_infra_dependency_error(self):
+        current_user = SimpleNamespace(id=1)
+        request = SimilaritySearchRequest(text="登录失败", limit=2, threshold=0.5)
+
+        with patch.object(
+            similarity_endpoint, "search_similar_tasks", AsyncMock(side_effect=OSError("db unavailable"))
+        ):
+            response = await similarity_endpoint.search_similar(request=request, current_user=current_user)
+
+        self.assertFalse(response.success)
+        self.assertEqual(response.total, 0)
+        self.assertEqual(response.results, [])
+        self.assertIn("依赖", response.message or "")
+
+    async def test_search_similar_raises_http_500_on_unexpected_error(self):
+        current_user = SimpleNamespace(id=1)
+        request = SimilaritySearchRequest(text="登录失败", limit=2, threshold=0.5)
+
+        with patch.object(
+            similarity_endpoint, "search_similar_tasks", AsyncMock(side_effect=ValueError("unknown"))
+        ):
+            with self.assertRaises(HTTPException) as ctx:
+                await similarity_endpoint.search_similar(request=request, current_user=current_user)
+
+        self.assertEqual(ctx.exception.status_code, 500)
 
 
 if __name__ == "__main__":

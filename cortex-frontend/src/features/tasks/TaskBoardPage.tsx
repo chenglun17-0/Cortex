@@ -194,13 +194,19 @@ export const TaskBoardPage: React.FC = () => {
         if (currentSeq !== similarSearchSeqRef.current) {
           return;
         }
-        setSimilarTasks(response.success ? response.results : []);
+        if (response.success) {
+          setSimilarTasks(response.results);
+          setSimilarSearchError(null);
+        } else {
+          setSimilarTasks([]);
+          setSimilarSearchError(response.message || '语义查重暂不可用，不影响继续创建任务');
+        }
       } catch {
         if (currentSeq !== similarSearchSeqRef.current) {
           return;
         }
         setSimilarTasks([]);
-        setSimilarSearchError('语义查重失败，请稍后重试');
+        setSimilarSearchError('语义查重暂不可用，不影响继续创建任务');
       } finally {
         if (currentSeq === similarSearchSeqRef.current) {
           setIsSearchingSimilar(false);
@@ -519,7 +525,7 @@ export const TaskBoardPage: React.FC = () => {
           ) : similarSearchError ? (
             <Alert
               style={{ marginTop: 8 }}
-              type="error"
+              type="warning"
               showIcon
               message={similarSearchError}
             />

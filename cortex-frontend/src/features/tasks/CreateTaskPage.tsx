@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Typography, Button, Form, Input, Select, DatePicker, Card,
   List, message, Space, Spin, Alert, Divider
@@ -38,6 +38,8 @@ export const CreateTaskPage: React.FC = () => {
   const [similarTasks, setSimilarTasks] = useState<SimilarTask[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchTriggered, setSearchTriggered] = useState(false);
+  const [similarSearchError, setSimilarSearchError] = useState<string | null>(null);
+  const similarSearchSeqRef = useRef(0);
 
   // 获取项目列表
   const { data: projects } = useQuery({
@@ -63,13 +65,20 @@ export const CreateTaskPage: React.FC = () => {
   // 搜索相似任务（防抖）
   const searchSimilar = useCallback(async () => {
     if (!title.trim() || title.length < 3) {
+      similarSearchSeqRef.current += 1;
       setSimilarTasks([]);
       setSearchTriggered(false);
+      setSimilarSearchError(null);
+      setIsSearching(false);
       return;
     }
 
+    const currentSeq = similarSearchSeqRef.current + 1;
+    similarSearchSeqRef.current = currentSeq;
+
     setIsSearching(true);
     setSearchTriggered(true);
+    setSimilarSearchError(null);
 
     try {
       const textContent = `${title}\n${description || ''}`;
@@ -79,16 +88,27 @@ export const CreateTaskPage: React.FC = () => {
         threshold: 0.5,
       });
 
+      if (currentSeq !== similarSearchSeqRef.current) {
+        return;
+      }
+
       if (response.success) {
         setSimilarTasks(response.results);
+        setSimilarSearchError(null);
       } else {
         setSimilarTasks([]);
+        setSimilarSearchError(response.message || '语义查重暂不可用，不影响继续创建任务');
       }
-    } catch (error) {
-      console.error('搜索相似任务失败:', error);
+    } catch {
+      if (currentSeq !== similarSearchSeqRef.current) {
+        return;
+      }
       setSimilarTasks([]);
+      setSimilarSearchError('语义查重暂不可用，不影响继续创建任务');
     } finally {
-      setIsSearching(false);
+      if (currentSeq === similarSearchSeqRef.current) {
+        setIsSearching(false);
+      }
     }
   }, [title, description]);
 
@@ -288,6 +308,13 @@ export const CreateTaskPage: React.FC = () => {
                 type="info"
                 message="输入任务标题"
                 description="输入至少 3 个字符后将自动检测相似任务"
+                showIcon
+                style={{ borderRadius: 8 }}
+              />
+            ) : similarSearchError ? (
+              <Alert
+                type="warning"
+                message={similarSearchError}
                 showIcon
                 style={{ borderRadius: 8 }}
               />
