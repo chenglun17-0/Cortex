@@ -147,6 +147,15 @@ export const TaskBoardPage: React.FC = () => {
     navigate(`/tasks/${taskId}`);
   };
 
+  const handleTaskCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, taskId: number) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (event.key === 'Enter') {
+      handleTaskClick(taskId);
+    }
+  };
+
   const handleProjectClick = (e: React.MouseEvent, projectId: number) => {
     e.stopPropagation();
     navigate(`/projects/${projectId}`);
@@ -334,6 +343,9 @@ export const TaskBoardPage: React.FC = () => {
                             variant="borderless"
                             hoverable
                             onClick={() => handleTaskClick(task.id)}
+                            onKeyDown={(event) => handleTaskCardKeyDown(event, task.id)}
+                            role="button"
+                            tabIndex={0}
                             style={{
                               marginBottom: '12px',
                               borderRadius: '8px',
@@ -354,12 +366,14 @@ export const TaskBoardPage: React.FC = () => {
                             <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: 12, lineHeight: 1.5 }}>
                               {task.title}
                             </div>
-                            <div
-                              style={{ fontSize: 12, color: '#6366f1', cursor: 'pointer' }}
+                            <Button
+                              type="link"
+                              size="small"
+                              style={{ fontSize: 12, color: '#6366f1', padding: 0, height: 'auto' }}
                               onClick={(e) => handleProjectClick(e, task.project_id)}
                             >
                               {projectNameMap.get(task.project_id) || `项目 ${task.project_id}`}
-                            </div>
+                            </Button>
                           </Card>
                         )}
                       </Draggable>
@@ -477,9 +491,14 @@ export const TaskBoardPage: React.FC = () => {
                   dataSource={similarTasks}
                   renderItem={(item) => (
                     <List.Item style={{ paddingInline: 0 }}>
-                      <a onClick={() => navigate(`/tasks/${item.task_id}`)}>
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ padding: 0, height: 'auto' }}
+                        onClick={() => navigate(`/tasks/${item.task_id}`)}
+                      >
                         #{item.task_id} {item.title}
-                      </a>
+                      </Button>
                       <Tag color="orange">{Math.round(item.similarity * 100)}%</Tag>
                     </List.Item>
                   )}

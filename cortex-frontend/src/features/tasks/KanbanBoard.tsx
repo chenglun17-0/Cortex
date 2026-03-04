@@ -560,9 +560,14 @@ export const KanbanBoard: React.FC = () => {
                                     dataSource={similarTasks}
                                     renderItem={(item) => (
                                         <List.Item style={{ paddingInline: 0 }}>
-                                            <a onClick={() => navigate(`/tasks/${item.task_id}`)}>
+                                            <Button
+                                                type="link"
+                                                size="small"
+                                                style={{ padding: 0, height: 'auto' }}
+                                                onClick={() => navigate(`/tasks/${item.task_id}`)}
+                                            >
                                                 #{item.task_id} {item.title}
-                                            </a>
+                                            </Button>
                                             <Tag color="orange">{Math.round(item.similarity * 100)}%</Tag>
                                         </List.Item>
                                     )}
