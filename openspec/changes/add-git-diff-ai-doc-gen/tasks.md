@@ -31,5 +31,5 @@
 
 ## 7. Testing
 - [x] 7.1 Test with mock AI service (no API key)
-- [ ] 7.2 Test with real OpenAI API
+- [x] 7.2 Test with real AI provider API (according to environment variables)
 - [x] 7.3 Test edge cases (empty diff, large diff, timeout)
