@@ -52,6 +52,9 @@ export const KanbanBoard: React.FC = () => {
     const [searchTriggered, setSearchTriggered] = useState(false);
     const [similarSearchError, setSimilarSearchError] = useState<string | null>(null);
     const similarSearchSeqRef = useRef(0);
+    const trimmedTitle = draftTitle.trim();
+    const trimmedDescription = draftDescription.trim();
+    const canSearchSimilar = `${trimmedTitle}\n${trimmedDescription}`.trim().length >= 3;
     const [form] = Form.useForm();
 
     const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
@@ -140,8 +143,11 @@ export const KanbanBoard: React.FC = () => {
 
     const searchSimilar = useCallback(
         async (title: string, description: string) => {
-            const trimmedTitle = title.trim();
-            if (trimmedTitle.length < 3) {
+            const normalizedTitle = title.trim();
+            const normalizedDescription = description.trim();
+            const queryText = `${normalizedTitle}\n${normalizedDescription}`.trim();
+
+            if (queryText.length < 3) {
                 similarSearchSeqRef.current += 1;
                 setSimilarTasks([]);
                 setSearchTriggered(false);
@@ -157,9 +163,8 @@ export const KanbanBoard: React.FC = () => {
             setSimilarSearchError(null);
 
             try {
-                const text = `${trimmedTitle}\n${description.trim()}`;
                 const response = await searchSimilarTasks({
-                    text,
+                    text: queryText,
                     limit: 3,
                     threshold: 0.5,
                 });
@@ -290,7 +295,6 @@ export const KanbanBoard: React.FC = () => {
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={openCreateTaskModal}
-                        size="large"
                         style={{ borderRadius: 8 }}
                     >
                         创建任务
@@ -543,7 +547,14 @@ export const KanbanBoard: React.FC = () => {
                         <Input.TextArea rows={4} placeholder="输入任务描述..." style={{ borderRadius: 6 }} />
                     </Form.Item>
 
-                    {isSearchingSimilar ? (
+                    {!searchTriggered && !canSearchSimilar ? (
+                        <Alert
+                            style={{ marginTop: 8 }}
+                            type="info"
+                            showIcon
+                            message="输入至少 3 个字符后，将自动进行语义查重"
+                        />
+                    ) : isSearchingSimilar ? (
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
                             <Spin size="small" />
                             <span style={{ color: '#64748b' }}>正在进行语义查重...</span>
