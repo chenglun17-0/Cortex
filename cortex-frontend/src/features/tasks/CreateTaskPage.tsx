@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildSimilarityQueryText, searchSimilarTasks, resolveSimilaritySearchErrorMessage } from './similarityService';
 import type { SimilarTask } from './similarityService';
-import { getProjects } from '../projects/service';
+import { getProjectMembers, getProjects } from '../projects/service';
 import { createTask } from './service';
 import type { TaskCreate } from '../../types';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -25,12 +25,16 @@ type CreateTaskFormValues = {
   priority?: string;
   deadline?: Dayjs;
   type?: string;
+  assignee_id?: number;
+  collaborator_ids?: number[];
 };
 
 export const CreateTaskPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+  const selectedProjectId = Form.useWatch<number | undefined>('project_id', form);
+  const selectedAssigneeId = Form.useWatch<number | undefined>('assignee_id', form);
 
   // 表单状态
   const [title, setTitle] = useState('');
@@ -45,6 +49,12 @@ export const CreateTaskPage: React.FC = () => {
   const { data: projects } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
+  });
+
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: ['projectMembers', selectedProjectId],
+    queryFn: () => getProjectMembers(Number(selectedProjectId)),
+    enabled: !!selectedProjectId,
   });
 
   // 创建任务 mutation
@@ -122,6 +132,11 @@ export const CreateTaskPage: React.FC = () => {
   }, [title, description, searchSimilar]);
 
   const handleSubmit = (values: CreateTaskFormValues) => {
+    const assigneeId = values.assignee_id;
+    const collaboratorIds = Array.from(
+      new Set((values.collaborator_ids || []).filter((userId) => userId !== assigneeId)),
+    );
+
     const taskData: TaskCreate = {
       title: values.title,
       description: values.description || '',
@@ -130,10 +145,17 @@ export const CreateTaskPage: React.FC = () => {
       deadline: values.deadline?.format('YYYY-MM-DD'),
       type: values.type || 'feature',
       status: 'TODO',
+      assignee_id: assigneeId,
+      collaborator_ids: collaboratorIds,
     };
 
     createMutation.mutate(taskData);
   };
+
+  useEffect(() => {
+    form.setFieldValue('assignee_id', undefined);
+    form.setFieldValue('collaborator_ids', []);
+  }, [form, selectedProjectId]);
 
   // 获取优先级颜色
   const getPriorityColor = (priority: string) => {
@@ -243,6 +265,52 @@ export const CreateTaskPage: React.FC = () => {
                       { label: '中', value: 'MEDIUM', style: { color: '#f97316' } },
                       { label: '低', value: 'LOW', style: { color: '#22c55e' } },
                     ]}
+                  />
+                </Form.Item>
+              </div>
+
+              <div style={{ display: 'flex', gap: 16 }}>
+                <Form.Item
+                  name="assignee_id"
+                  label="负责人"
+                  style={{ flex: 1 }}
+                >
+                  <Select
+                    allowClear
+                    placeholder={selectedProjectId ? '选择负责人（默认当前用户）' : '请先选择项目'}
+                    disabled={!selectedProjectId}
+                    options={projectMembers.map((member) => ({
+                      label: `${member.username} (${member.email})`,
+                      value: member.id,
+                    }))}
+                    onChange={(value) => {
+                      const collaboratorIds = form.getFieldValue('collaborator_ids') as number[] | undefined;
+                      if (!collaboratorIds?.length || value === undefined) {
+                        return;
+                      }
+                      form.setFieldValue(
+                        'collaborator_ids',
+                        collaboratorIds.filter((userId) => userId !== value),
+                      );
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="collaborator_ids"
+                  label="协同人"
+                  style={{ flex: 1 }}
+                >
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder={selectedProjectId ? '可选择多个协同人' : '请先选择项目'}
+                    disabled={!selectedProjectId}
+                    options={projectMembers.map((member) => ({
+                      label: `${member.username} (${member.email})`,
+                      value: member.id,
+                      disabled: selectedAssigneeId === member.id,
+                    }))}
                   />
                 </Form.Item>
               </div>

@@ -23,13 +23,13 @@
 | 端点文件 | 主要能力 |
 |----------|----------|
 | `endpoints/login.py` | Token 登录签发 |
-| `endpoints/users.py` | 用户注册、当前用户查询/更新、用户搜索 |
+| `endpoints/users.py` | 用户注册、当前用户查询/更新、用户搜索（同组织范围） |
 | `endpoints/organizations.py` | 组织创建与查询 |
 | `endpoints/projects.py` | 项目 CRUD 与成员管理 |
 | `endpoints/tasks.py` | 任务 CRUD、评论、访问控制、软删除 |
 | `endpoints/similarity.py` | 相似任务检索与健康检查 |
 
-补充：`endpoints/projects.py` 的创建/查询/更新接口统一返回可序列化结构（`members` 列表 + ISO 时间字符串），避免直接返回 ORM 对象触发响应模型校验失败。`read_my_projects` 查询条件为“负责人或成员”，降低成员关联异常导致的可见性问题。
+补充：`endpoints/projects.py` 的创建/查询/更新接口统一返回可序列化结构（`members` 列表 + ISO 时间字符串），避免直接返回 ORM 对象触发响应模型校验失败。`read_my_projects` 通过 `ProjectMember.project_id` 与 `owner_id` 合并可见项目 ID 再查询，避免联表条件导致越权展示。`endpoints/tasks.py` 支持“单负责人（`assignee_id`）+多协同人（`collaborator_ids`）”任务分配，协同关系落库到 `task_collaborators` 表，并在任务读接口统一返回 `collaborator_ids`。
 
 ## 4. 模型清单
 
@@ -41,6 +41,7 @@
 | `ProjectMember` | `models/project_member.py` | 项目成员关联 |
 | `Task` | `models/task.py` | 任务主体（含软删除字段 `deleted_at`） |
 | `TaskComment` | `models/task.py` | 任务评论实体 |
+| `TaskCollaborator` | `models/task.py` | 任务协同人关联（`task_id + user_id` 唯一） |
 
 ## 5. 主要调用链
 

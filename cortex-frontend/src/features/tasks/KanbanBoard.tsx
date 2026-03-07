@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Typography, Card, Spin, Tag, Button, Modal, Form, Input, Select, message, Space, Breadcrumb, Avatar, Tooltip, DatePicker, Drawer, List, Popconfirm, Alert } from 'antd';
-import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserAddOutlined, UserDeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, MoreOutlined, ClockCircleOutlined, TeamOutlined, UserDeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTasksByProject, updateTask, createTask } from './service';
@@ -20,6 +20,8 @@ type CreateTaskFormValues = {
     priority?: string;
     deadline?: Dayjs;
     description?: string;
+    assignee_id?: number;
+    collaborator_ids?: number[];
 };
 
 type SimilarTaskItem = {
@@ -56,6 +58,7 @@ export const KanbanBoard: React.FC = () => {
     const trimmedDescription = draftDescription.trim();
     const canSearchSimilar = `${trimmedTitle}\n${trimmedDescription}`.trim().length >= 3;
     const [form] = Form.useForm();
+    const selectedAssigneeId = Form.useWatch<number | undefined>('assignee_id', form);
 
     const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
         queryKey: ['tasks', projectId],
@@ -85,7 +88,7 @@ export const KanbanBoard: React.FC = () => {
     const { data: searchResults = [], isLoading: isSearching } = useQuery({
         queryKey: ['userSearch', searchKeyword],
         queryFn: () => searchUsers(searchKeyword),
-        enabled: searchKeyword.length > 0,
+        enabled: memberDrawerOpen,
     });
 
     const addMemberMutation = useMutation({
@@ -97,8 +100,9 @@ export const KanbanBoard: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['projects'] });
             setSearchKeyword('');
         },
-        onError: () => {
-            message.error('添加失败');
+        onError: (error: unknown) => {
+            const detail = (error as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+            message.error(detail || '添加失败');
         }
     });
 
@@ -209,11 +213,17 @@ export const KanbanBoard: React.FC = () => {
 
     const handleCreate = (values: CreateTaskFormValues) => {
         if (!projectId) return;
+        const assigneeId = values.assignee_id;
+        const collaboratorIds = Array.from(
+            new Set((values.collaborator_ids || []).filter((userId) => userId !== assigneeId)),
+        );
         createTaskMutation.mutate({
             ...values,
             project_id: Number(projectId),
             status: TaskStatus.TODO,
             deadline: values.deadline?.format('YYYY-MM-DD'),
+            assignee_id: assigneeId,
+            collaborator_ids: collaboratorIds,
         });
     };
 
@@ -319,45 +329,74 @@ export const KanbanBoard: React.FC = () => {
                 <div style={{ marginBottom: 16 }}>
                     <Text strong style={{ display: 'block', marginBottom: 8 }}>添加成员</Text>
                     <Input
-                        placeholder="搜索用户名..."
+                        placeholder="搜索用户名（留空显示同组织用户）"
                         prefix={<SearchOutlined />}
                         value={searchKeyword}
                         onChange={(e) => handleSearchUser(e.target.value)}
                         allowClear
+                        style={{ borderRadius: 8 }}
                     />
-                    {searchKeyword && (
-                        <List
-                            size="small"
-                            dataSource={availableSearchResults}
-                            loading={isSearching}
-                            style={{ marginTop: 8, maxHeight: 200, overflow: 'auto', border: '1px solid #f0f0f0', borderRadius: 8 }}
-                            renderItem={(user: User) => (
-                                <List.Item
-                                    actions={[
-                                        <Button
-                                            type="primary"
-                                            size="small"
-                                            icon={<UserAddOutlined />}
-                                            onClick={() => handleAddMember(user.id)}
+                    <List
+                        rowKey="id"
+                        size="small"
+                        dataSource={availableSearchResults}
+                        loading={isSearching}
+                        locale={{ emptyText: searchKeyword ? '未找到匹配用户' : '暂无同组织可添加成员' }}
+                        style={{
+                            marginTop: 8,
+                            maxHeight: 220,
+                            overflow: 'auto',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 8,
+                            background: '#f8fafc',
+                        }}
+                        renderItem={(user: User) => (
+                            <List.Item style={{ padding: '10px 12px' }}>
+                                <List.Item.Meta
+                                    style={{ margin: 0, minWidth: 0 }}
+                                    avatar={<Avatar size="small" icon={<UserOutlined />} />}
+                                    title={
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                            <span>{user.username}</span>
+                                            <Popconfirm
+                                                title={`确认添加 ${user.username} 到项目成员吗？`}
+                                                onConfirm={() => handleAddMember(user.id)}
+                                                okText="确认"
+                                                cancelText="取消"
+                                            >
+                                                <Button
+                                                    type="text"
+                                                    size="small"
+                                                    icon={<PlusOutlined />}
+                                                    aria-label={`添加成员 ${user.username}`}
+                                                    style={{ borderRadius: 6, flexShrink: 0 }}
+                                                />
+                                            </Popconfirm>
+                                        </div>
+                                    }
+                                    description={
+                                        <Text
+                                            type="secondary"
+                                            style={{
+                                                display: 'block',
+                                                whiteSpace: 'normal',
+                                                wordBreak: 'break-all',
+                                                marginBottom: 0,
+                                            }}
                                         >
-                                            添加
-                                        </Button>
-                                    ]}
-                                >
-                                    <List.Item.Meta
-                                        title={user.username}
-                                        description={user.email}
-                                        avatar={<Avatar size="small" icon={<UserOutlined />} />}
-                                    />
-                                </List.Item>
-                            )}
-                        />
-                    )}
+                                            {user.email}
+                                        </Text>
+                                    }
+                                />
+                            </List.Item>
+                        )}
+                    />
                 </div>
 
                 {/* 成员列表 */}
                 <Text strong style={{ display: 'block', marginBottom: 8 }}>当前成员 ({members.length})</Text>
                 <List
+                    rowKey="id"
                     dataSource={members}
                     renderItem={(user: User) => (
                         <List.Item
@@ -530,6 +569,42 @@ export const KanbanBoard: React.FC = () => {
                             <Option value="chore">构建 (chore)</Option>
                             <Option value="refactor">重构 (refactor)</Option>
                         </Select>
+                    </Form.Item>
+
+                    <Form.Item name="assignee_id" label="负责人">
+                        <Select
+                            allowClear
+                            placeholder="选择负责人（默认当前用户）"
+                            style={{ borderRadius: 6 }}
+                            options={members.map((member) => ({
+                                label: `${member.username} (${member.email})`,
+                                value: member.id,
+                            }))}
+                            onChange={(value) => {
+                                const collaboratorIds = form.getFieldValue('collaborator_ids') as number[] | undefined;
+                                if (!collaboratorIds?.length || value === undefined) {
+                                    return;
+                                }
+                                form.setFieldValue(
+                                    'collaborator_ids',
+                                    collaboratorIds.filter((userId) => userId !== value),
+                                );
+                            }}
+                        />
+                    </Form.Item>
+
+                    <Form.Item name="collaborator_ids" label="协同人">
+                        <Select
+                            mode="multiple"
+                            allowClear
+                            placeholder="可选择多个协同人"
+                            style={{ borderRadius: 6 }}
+                            options={members.map((member) => ({
+                                label: `${member.username} (${member.email})`,
+                                value: member.id,
+                                disabled: selectedAssigneeId === member.id,
+                            }))}
+                        />
                     </Form.Item>
 
                     <Form.Item name="priority" label="优先级">

@@ -5,7 +5,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyTasks, updateTask, createTask } from './service';
-import { getProjects } from '../projects/service';
+import { getProjectMembers, getProjects } from '../projects/service';
 import { buildSimilarityQueryText, searchSimilarTasks, resolveSimilaritySearchErrorMessage } from './similarityService';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
@@ -24,6 +24,8 @@ type CreateTaskFormValues = {
   priority?: string;
   deadline?: Dayjs;
   type?: string;
+  assignee_id?: number;
+  collaborator_ids?: number[];
 };
 
 type SimilarTaskItem = {
@@ -56,6 +58,8 @@ export const TaskBoardPage: React.FC = () => {
   const [searchTriggered, setSearchTriggered] = useState(false);
   const [similarSearchError, setSimilarSearchError] = useState<string | null>(null);
   const similarSearchSeqRef = useRef(0);
+  const selectedProjectId = Form.useWatch<number | undefined>('project_id', form);
+  const selectedAssigneeId = Form.useWatch<number | undefined>('assignee_id', form);
   const trimmedTitle = draftTitle.trim();
   const trimmedDescription = draftDescription.trim();
   const canSearchSimilar = `${trimmedTitle}\n${trimmedDescription}`.trim().length >= 3;
@@ -68,6 +72,12 @@ export const TaskBoardPage: React.FC = () => {
   const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
+  });
+
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: ['projectMembers', selectedProjectId],
+    queryFn: () => getProjectMembers(Number(selectedProjectId)),
+    enabled: !!selectedProjectId,
   });
 
   // 创建项目ID到项目名称的映射
@@ -229,6 +239,14 @@ export const TaskBoardPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [isCreateModalOpen, draftTitle, draftDescription, searchSimilar]);
 
+  useEffect(() => {
+    if (!isCreateModalOpen) {
+      return;
+    }
+    form.setFieldValue('assignee_id', undefined);
+    form.setFieldValue('collaborator_ids', []);
+  }, [form, isCreateModalOpen, selectedProjectId]);
+
   const openCreateTaskModal = () => {
     if (projectFilter !== 'ALL') {
       form.setFieldsValue({ project_id: projectFilter });
@@ -244,6 +262,11 @@ export const TaskBoardPage: React.FC = () => {
   };
 
   const handleCreateTask = (values: CreateTaskFormValues) => {
+    const assigneeId = values.assignee_id;
+    const collaboratorIds = Array.from(
+      new Set((values.collaborator_ids || []).filter((userId) => userId !== assigneeId)),
+    );
+
     createTaskMutation.mutate({
       title: values.title,
       description: values.description || '',
@@ -252,6 +275,8 @@ export const TaskBoardPage: React.FC = () => {
       type: values.type || 'feature',
       deadline: values.deadline?.format('YYYY-MM-DD'),
       status: TaskStatus.TODO,
+      assignee_id: assigneeId,
+      collaborator_ids: collaboratorIds,
     });
   };
 
@@ -444,6 +469,48 @@ export const TaskBoardPage: React.FC = () => {
                 </Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="assignee_id"
+            label="负责人"
+          >
+            <Select
+              allowClear
+              placeholder={selectedProjectId ? '选择负责人（默认当前用户）' : '请先选择项目'}
+              disabled={!selectedProjectId}
+              options={projectMembers.map((member) => ({
+                label: `${member.username} (${member.email})`,
+                value: member.id,
+              }))}
+              onChange={(value) => {
+                const collaboratorIds = form.getFieldValue('collaborator_ids') as number[] | undefined;
+                if (!collaboratorIds?.length || value === undefined) {
+                  return;
+                }
+                form.setFieldValue(
+                  'collaborator_ids',
+                  collaboratorIds.filter((userId) => userId !== value),
+                );
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="collaborator_ids"
+            label="协同人"
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder={selectedProjectId ? '可选择多个协同人' : '请先选择项目'}
+              disabled={!selectedProjectId}
+              options={projectMembers.map((member) => ({
+                label: `${member.username} (${member.email})`,
+                value: member.id,
+                disabled: selectedAssigneeId === member.id,
+              }))}
+            />
           </Form.Item>
 
           <Form.Item

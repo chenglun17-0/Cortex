@@ -20,6 +20,7 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     project_id: int
     assignee_id: Optional[int] = None
+    collaborator_ids: List[int] = Field(default_factory=list)
 
 # 更新任务时的参数 (所有字段都是可选的)
 class TaskUpdate(BaseModel):
@@ -30,6 +31,8 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     branch_name: Optional[str] = None
     deadline: Optional[date] = None
+    assignee_id: Optional[int] = None
+    collaborator_ids: Optional[List[int]] = None
 
 # 返回给前端/CLI 的完整数据
 class TaskRead(TaskBase):
@@ -37,6 +40,7 @@ class TaskRead(TaskBase):
     project_id: int
     branch_name: Optional[str] = None
     assignee_id: Optional[int]
+    collaborator_ids: List[int] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

@@ -44,6 +44,7 @@ export interface Task {
   status: TaskStatus;
   priority?: string;
   assignee_id?: number;
+  collaborator_ids: number[];
   project_id: number;
   branch_name?: string;
   deleted_at?: string | null;
@@ -59,6 +60,8 @@ export interface TaskUpdate {
   status?: TaskStatus;
   branch_name?: string | null;
   deadline?: string | null; // YYYY-MM-DD
+  assignee_id?: number | null;
+  collaborator_ids?: number[];
 }
 
 export interface TaskCreate {
@@ -69,6 +72,8 @@ export interface TaskCreate {
   status?: TaskStatus; // 可选，默认为 TODO
   type?: string; // 任务类型: feature, bug, docs, fix, refactor, chore
   deadline?: string; // 截止日期 YYYY-MM-DD
+  assignee_id?: number;
+  collaborator_ids?: number[];
 }
 
 export interface TaskComment {

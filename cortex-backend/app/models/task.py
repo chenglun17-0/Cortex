@@ -51,3 +51,20 @@ class TaskComment(models.Model):
     class Meta:
         table = "task_comments"
         ordering = ["-created_at", "-id"]
+
+
+class TaskCollaborator(models.Model):
+    id = fields.IntField(pk=True)
+    task = fields.ForeignKeyField(
+        "models.Task",
+        related_name="task_collaborators",
+    )
+    user = fields.ForeignKeyField(
+        "models.User",
+        related_name="task_collaborations",
+    )
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "task_collaborators"
+        unique_together = (("task", "user"),)
