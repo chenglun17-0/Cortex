@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from tortoise.expressions import Q
 from app.schemas.project import (
     ProjectCreate, ProjectRead, ProjectUpdate, ProjectMemberResponse
 )
@@ -64,18 +65,19 @@ async def create_project(
         user=current_user
     )
 
-    return project
+    members = await _get_project_members(project)
+    return format_project_response(project, members)
 
 
 @router.get("/", response_model=List[ProjectRead])
 async def read_my_projects(
         current_user: User = Depends(get_current_user)
 ):
-    # 查询我参与的所有项目（不包含已删除的）
+    # 查询我可见的所有项目（负责人或成员，不包含已删除的）
     projects = await Project.filter(
-        members__id=current_user.id,
+        Q(owner_id=current_user.id) | Q(members__id=current_user.id),
         deleted_at__isnull=True
-    ).all()
+    ).distinct().all()
 
     # 格式化返回数据
     result = []

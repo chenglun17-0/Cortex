@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from app.api.v1.endpoints import projects as projects_endpoint
 from app.api.v1.endpoints import users as users_endpoint
+from app.schemas.project import ProjectCreate
 from app.schemas.project import ProjectUpdate
 
 
@@ -27,6 +28,78 @@ class _FakePrefetchAwaitable:
 
 
 class ProjectManagementEndpointTests(unittest.IsolatedAsyncioTestCase):
+    async def test_read_my_projects_includes_owned_or_joined_projects(self):
+        current_user = SimpleNamespace(id=7)
+        project = SimpleNamespace(
+            id=3,
+            name="Owned Project",
+            description="owner visible",
+            owner_id=7,
+            organization_id=11,
+            created_at=datetime(2026, 3, 7, 8, 0, 0),
+            updated_at=datetime(2026, 3, 7, 8, 5, 0),
+        )
+        fake_query = SimpleNamespace(
+            distinct=Mock(),
+            all=AsyncMock(return_value=[project]),
+        )
+        fake_query.distinct.return_value = fake_query
+        member = SimpleNamespace(id=7, username="owner", email="owner@example.com")
+
+        with patch.object(projects_endpoint.Project, "filter", return_value=fake_query) as project_filter, patch.object(
+            projects_endpoint, "_get_project_members", AsyncMock(return_value=[member])
+        ):
+            result = await projects_endpoint.read_my_projects(current_user=current_user)
+
+        args, kwargs = project_filter.call_args
+        self.assertEqual(kwargs, {"deleted_at__isnull": True})
+        fake_query.distinct.assert_called_once()
+        self.assertEqual(len(args), 1)
+        query = args[0]
+        self.assertEqual(getattr(query, "join_type", None), "OR")
+        left, right = query.children
+        self.assertEqual(left.filters, {"owner_id": 7})
+        self.assertEqual(right.filters, {"members__id": 7})
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "Owned Project")
+        self.assertEqual(result[0]["members"], [member])
+
+    async def test_create_project_returns_serializable_payload(self):
+        current_user = SimpleNamespace(id=7, organization_id=11)
+        project = SimpleNamespace(
+            id=3,
+            name="AI Review",
+            description="回写 PR 评论",
+            owner_id=7,
+            organization_id=11,
+            created_at=datetime(2026, 3, 7, 8, 0, 0),
+            updated_at=datetime(2026, 3, 7, 8, 5, 0),
+        )
+        member = SimpleNamespace(id=7, username="owner", email="owner@example.com")
+
+        with patch.object(projects_endpoint.Project, "create", AsyncMock(return_value=project)) as create_mock, patch.object(
+            projects_endpoint.ProjectMember, "create", AsyncMock()
+        ) as member_create_mock, patch.object(
+            projects_endpoint, "_get_project_members", AsyncMock(return_value=[member])
+        ):
+            result = await projects_endpoint.create_project(
+                project_in=ProjectCreate(name="AI Review", description="回写 PR 评论"),
+                current_user=current_user,
+            )
+
+        create_mock.assert_awaited_once_with(
+            name="AI Review",
+            description="回写 PR 评论",
+            organization_id=11,
+            owner=current_user,
+        )
+        member_create_mock.assert_awaited_once_with(project=project, user=current_user)
+        self.assertEqual(result["owner_id"], 7)
+        self.assertEqual(result["organization_id"], 11)
+        self.assertEqual(result["members"], [member])
+        self.assertEqual(result["created_at"], "2026-03-07T08:00:00")
+        self.assertEqual(result["updated_at"], "2026-03-07T08:05:00")
+
     async def test_update_project_updates_fields_and_returns_members(self):
         project = SimpleNamespace(
             id=3,

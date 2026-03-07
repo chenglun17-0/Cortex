@@ -29,6 +29,8 @@
 | `endpoints/tasks.py` | 任务 CRUD、评论、访问控制、软删除 |
 | `endpoints/similarity.py` | 相似任务检索与健康检查 |
 
+补充：`endpoints/projects.py` 的创建/查询/更新接口统一返回可序列化结构（`members` 列表 + ISO 时间字符串），避免直接返回 ORM 对象触发响应模型校验失败。`read_my_projects` 查询条件为“负责人或成员”，降低成员关联异常导致的可见性问题。
+
 ## 4. 模型清单
 
 | 模型 | 文件 | 说明 |
