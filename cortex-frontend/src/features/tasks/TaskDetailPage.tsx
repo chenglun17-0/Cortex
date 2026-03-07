@@ -26,8 +26,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTaskById, updateTask, getTaskComments, createTaskComment } from './service';
-import { getProjects } from '../projects/service';
-import type { Project, TaskComment, TaskUpdate } from '../../types';
+import { getProjectMembers, getProjects } from '../projects/service';
+import type { Project, TaskComment, TaskUpdate, User } from '../../types';
 import { TaskStatus } from '../../types';
 import { getStatusConfig, getPriorityConfig, formatDateTime } from '../../utils';
 
@@ -98,6 +98,12 @@ export const TaskDetailPage: React.FC = () => {
     queryFn: getProjects,
   });
 
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: ['projectMembers', task?.project_id],
+    queryFn: () => getProjectMembers(task!.project_id),
+    enabled: !!task?.project_id,
+  });
+
   const {
     data: commentsData,
     isLoading: commentsLoading,
@@ -143,6 +149,16 @@ export const TaskDetailPage: React.FC = () => {
 
   // 获取当前任务的项目名称
   const projectName = task?.project_id ? projectNameMap.get(task.project_id) : undefined;
+  const memberMap = useMemo(() => {
+    const map = new Map<number, User>();
+    projectMembers.forEach((member) => map.set(member.id, member));
+    return map;
+  }, [projectMembers]);
+
+  const assignee = task?.assignee_id ? memberMap.get(task.assignee_id) : undefined;
+  const collaboratorUsers = (task?.collaborator_ids || [])
+    .map((userId) => memberMap.get(userId))
+    .filter((member): member is User => !!member);
 
   const updateMutation = useMutation({
     mutationFn: (data: TaskUpdate) => updateTask(parsedTaskId, data),
@@ -344,6 +360,24 @@ export const TaskDetailPage: React.FC = () => {
           </Descriptions.Item>
           <Descriptions.Item label="优先级">
             <Tag color={priorityInfo.color}>{priorityInfo.text}</Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="负责人">
+            {task.assignee_id ? (assignee ? `${assignee.username} (${assignee.email})` : `用户 #${task.assignee_id}`) : '未指定'}
+          </Descriptions.Item>
+          <Descriptions.Item label="协同人">
+            {task.collaborator_ids.length > 0 ? (
+              collaboratorUsers.length > 0 ? (
+                <Space direction="vertical" size={4}>
+                  {collaboratorUsers.map((member) => (
+                    <Text key={member.id}>{member.username} ({member.email})</Text>
+                  ))}
+                </Space>
+              ) : (
+                task.collaborator_ids.map((userId) => (
+                  <Text key={userId} style={{ display: 'block' }}>用户 #{userId}</Text>
+                ))
+              )
+            ) : '无'}
           </Descriptions.Item>
           {task.branch_name && (
             <Descriptions.Item label="Git 分支" span={2}>

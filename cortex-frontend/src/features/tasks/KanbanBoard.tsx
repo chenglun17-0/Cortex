@@ -277,6 +277,19 @@ export const KanbanBoard: React.FC = () => {
         });
     };
 
+    const handleTaskClick = (taskId: number) => {
+        navigate(`/tasks/${taskId}`);
+    };
+
+    const handleTaskCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, taskId: number) => {
+        if (event.target !== event.currentTarget) {
+            return;
+        }
+        if (event.key === 'Enter') {
+            handleTaskClick(taskId);
+        }
+    };
+
     if (isLoading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
 
     // 已添加的成员 ID 集合，用于过滤搜索结果
@@ -479,6 +492,11 @@ export const KanbanBoard: React.FC = () => {
                                                       {...provided.dragHandleProps}
                                                       size="small"
                                                       variant="borderless"
+                                                      hoverable
+                                                      onClick={() => handleTaskClick(task.id)}
+                                                      onKeyDown={(event) => handleTaskCardKeyDown(event, task.id)}
+                                                      role="button"
+                                                      tabIndex={0}
                                                       style={{
                                                           marginBottom: '12px',
                                                           borderRadius: '8px',
@@ -487,6 +505,7 @@ export const KanbanBoard: React.FC = () => {
                                                             : '0 1px 3px rgba(0, 0, 0, 0.05)',
                                                           border: '1px solid #e2e8f0',
                                                           background: '#fff',
+                                                          cursor: 'pointer',
                                                           ...provided.draggableProps.style,
                                                       }}
                                                       styles={{ body: { padding: '12px' } }}
