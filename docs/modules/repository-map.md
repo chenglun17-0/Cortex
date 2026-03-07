@@ -6,7 +6,7 @@
 |------|------|----------|
 | `cortex-backend/` | 后端 API 与 CLI 代码 | `app/main.py`、`cli/main.py` |
 | `cortex-frontend/` | Web 前端管理端 | `src/main.tsx`、`src/App.tsx` |
-| `scripts/` | 本地运行与部署脚本 | `start-all.sh`、`stop-all.sh` |
+| `scripts/` | 本地运行与部署脚本 | `dev-start.sh`、`dev-stop.sh` |
 | `docs/` | 项目文档、规则与模块说明 | `project.md`、`rules/`、`modules/` |
 | `openspec/` | 规格变更与提案管理 | `project.md`、`changes/`、`specs/` |
 | `specs/` | 旧版规格/任务文档 | `SPEC.md` 系列 |
@@ -30,7 +30,7 @@
 | CLI | `cortex-backend/cli/main.py` | Typer 命令入口（`ctx`） |
 | 前端 | `cortex-frontend/src/main.tsx` | React 根挂载与 QueryClient 注入 |
 | 前端路由 | `cortex-frontend/src/App.tsx` | 页面路由与登录守卫 |
-| 本地运行脚本 | `scripts/start-all.sh` / `scripts/stop-all.sh` | 一键启停本地环境 |
+| 本地运行脚本 | `scripts/dev-start.sh` / `scripts/dev-stop.sh` | 一键启停本地环境 |
 
 ## 4. 推荐阅读顺序
 

@@ -4,8 +4,8 @@
 
 | 脚本 | 作用 | 说明 |
 |------|------|------|
-| `scripts/start-all.sh` | 一键启动前后端 | 启动后端 `uvicorn` 与前端 `vite`，记录 PID 与日志 |
-| `scripts/stop-all.sh` | 一键停止前后端 | 读取 `.pids` 或按进程名兜底停止 |
+| `scripts/dev-start.sh` | 一键启动前后端 | 启动后端 `uvicorn` 与前端 `vite`，记录 PID 与日志 |
+| `scripts/dev-stop.sh` | 一键停止前后端 | 读取 `.pids` 或按进程名兜底停止 |
 | `scripts/ctx` | CLI 包装脚本 | 调用后端虚拟环境中的 `ctx` |
 | `scripts/deploy.sh` | 部署脚本 | 生产/发布相关操作入口 |
 
@@ -33,7 +33,7 @@
 ### 启动
 
 ```bash
-./scripts/start-all.sh
+./scripts/dev-start.sh
 ```
 
 流程：
@@ -46,7 +46,7 @@
 ### 停止
 
 ```bash
-./scripts/stop-all.sh
+./scripts/dev-stop.sh
 ```
 
 流程：

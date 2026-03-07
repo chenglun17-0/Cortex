@@ -11,8 +11,8 @@
 
 | 子模块 | 文件 | 职责 |
 |--------|------|------|
-| 本地启动 | `scripts/start-all.sh` | 启动后端与前端并写入 PID |
-| 本地停止 | `scripts/stop-all.sh` | 按 PID/进程名停止服务 |
+| 本地启动 | `scripts/dev-start.sh` | 启动后端与前端并写入 PID |
+| 本地停止 | `scripts/dev-stop.sh` | 按 PID/进程名停止服务 |
 | 部署脚本 | `scripts/deploy.sh` | 拉代码、校验配置、重建容器 |
 | 容器编排 | `docker-compose.yml` | 编排 `postgres/backend/frontend` 服务 |
 | 镜像构建 | `Dockerfile.backend`、`Dockerfile.frontend` | 后端/前端容器镜像构建 |
@@ -22,7 +22,7 @@
 | 配置项 | 来源 |
 |--------|------|
 | 后端环境变量 | `cortex-backend/.env`（运行时） |
-| 后端环境模板 | `cortex-backend/.env.example`（若存在）或由 `start-all.sh` 兜底复制根目录 `.env.example` |
+| 后端环境模板 | `cortex-backend/.env.example`（若存在）或由 `dev-start.sh` 兜底复制根目录 `.env.example` |
 | 根目录环境模板 | `.env.example`（开发默认模板） |
 | PostgreSQL 参数 | `docker-compose.yml` 的 `POSTGRES_*` |
 | 前端 API 代理 | `vite.config.ts`（开发）、`nginx-frontend.conf`（生产） |
@@ -53,7 +53,7 @@
 
 ```bash
 # 检查启动脚本读取与复制逻辑
-rg -n "\\.env|\\.env\\.example|export \\$\\(grep" scripts/start-all.sh
+rg -n "\\.env|\\.env\\.example|export \\$\\(grep" scripts/dev-start.sh
 
 # 检查后端部署依赖的 env 文件
 rg -n "cortex-backend/.env|env_file" scripts/deploy.sh docker-compose.yml

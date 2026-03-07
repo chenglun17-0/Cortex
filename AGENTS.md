@@ -39,12 +39,12 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ### 启动前后端服务
 ```bash
-./scripts/start-all.sh
+./scripts/dev-start.sh
 ```
 
 ### 停止前后端服务
 ```bash
-./scripts/stop-all.sh
+./scripts/dev-stop.sh
 ```
 
 ### 查看日志
