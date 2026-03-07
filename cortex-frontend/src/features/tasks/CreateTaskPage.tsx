@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { searchSimilarTasks } from './similarityService';
+import { buildSimilarityQueryText, searchSimilarTasks, resolveSimilaritySearchErrorMessage } from './similarityService';
 import type { SimilarTask } from './similarityService';
 import { getProjects } from '../projects/service';
 import { createTask } from './service';
@@ -81,7 +81,7 @@ export const CreateTaskPage: React.FC = () => {
     setSimilarSearchError(null);
 
     try {
-      const textContent = `${title}\n${description || ''}`;
+      const textContent = buildSimilarityQueryText(title, description);
       const response = await searchSimilarTasks({
         text: textContent,
         limit: 5,
@@ -97,14 +97,14 @@ export const CreateTaskPage: React.FC = () => {
         setSimilarSearchError(null);
       } else {
         setSimilarTasks([]);
-        setSimilarSearchError(response.message || '语义查重暂不可用，不影响继续创建任务');
+        setSimilarSearchError(resolveSimilaritySearchErrorMessage({ response }));
       }
-    } catch {
+    } catch (error) {
       if (currentSeq !== similarSearchSeqRef.current) {
         return;
       }
       setSimilarTasks([]);
-      setSimilarSearchError('语义查重暂不可用，不影响继续创建任务');
+      setSimilarSearchError(resolveSimilaritySearchErrorMessage({ error }));
     } finally {
       if (currentSeq === similarSearchSeqRef.current) {
         setIsSearching(false);

@@ -21,7 +21,7 @@ from app.schemas.similarity import (
 from app.models import TaskComment
 from app.api.deps import get_current_user
 
-router = APIRouter(prefix="/similarity", tags=["similarity"])
+router = APIRouter(tags=["similarity"])
 logger = logging.getLogger(__name__)
 
 
@@ -118,7 +118,7 @@ async def search_similar(
             query=request.text,
             results=[],
             total=0,
-            message="语义查重服务暂不可用，不影响继续创建任务",
+            message="本次语义查重请求失败（模型服务暂不可用），不是功能不支持；你可以先创建任务，稍后重试查重",
         )
     except (asyncpg.PostgresError, OSError, ConnectionError) as e:
         logger.warning("Similarity search degraded due to infra dependency: %s", e)
@@ -127,7 +127,7 @@ async def search_similar(
             query=request.text,
             results=[],
             total=0,
-            message="语义查重依赖暂不可用，不影响继续创建任务",
+            message="本次语义查重请求失败（数据库/网络连接异常），不是功能不支持；你可以先创建任务，稍后重试查重",
         )
     except Exception as e:
         logger.exception("Similarity search failed: %s", e)

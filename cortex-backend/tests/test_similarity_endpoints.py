@@ -26,6 +26,12 @@ class _FakeCommentQuerySet:
 
 
 class SimilarityEndpointTests(unittest.IsolatedAsyncioTestCase):
+    def test_similarity_router_paths_do_not_repeat_prefix(self):
+        paths = {route.path for route in similarity_endpoint.router.routes}
+        self.assertIn("/search", paths)
+        self.assertIn("/health", paths)
+        self.assertNotIn("/similarity/search", paths)
+
     async def test_build_recommendation_combines_description_and_latest_comments(self):
         fake_comments = [
             SimpleNamespace(content=" 优先修复鉴权头格式 "),
@@ -110,7 +116,8 @@ class SimilarityEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.total, 0)
         self.assertEqual(response.results, [])
-        self.assertIn("暂不可用", response.message or "")
+        self.assertIn("请求失败", response.message or "")
+        self.assertIn("不是功能不支持", response.message or "")
 
     async def test_search_similar_degrades_on_infra_dependency_error(self):
         current_user = SimpleNamespace(id=1)
@@ -124,7 +131,8 @@ class SimilarityEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.total, 0)
         self.assertEqual(response.results, [])
-        self.assertIn("依赖", response.message or "")
+        self.assertIn("请求失败", response.message or "")
+        self.assertIn("不是功能不支持", response.message or "")
 
     async def test_search_similar_raises_http_500_on_unexpected_error(self):
         current_user = SimpleNamespace(id=1)

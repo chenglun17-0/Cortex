@@ -6,7 +6,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyTasks, updateTask, createTask } from './service';
 import { getProjects } from '../projects/service';
-import { searchSimilarTasks } from './similarityService';
+import { buildSimilarityQueryText, searchSimilarTasks, resolveSimilaritySearchErrorMessage } from './similarityService';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
 import { TaskStatus, KanbanColumns } from '../../constants';
@@ -168,7 +168,7 @@ export const TaskBoardPage: React.FC = () => {
     async (title: string, description: string) => {
       const normalizedTitle = title.trim();
       const normalizedDescription = description.trim();
-      const queryText = `${normalizedTitle}\n${normalizedDescription}`.trim();
+      const queryText = buildSimilarityQueryText(normalizedTitle, normalizedDescription);
 
       if (queryText.length < 3) {
         similarSearchSeqRef.current += 1;
@@ -199,14 +199,14 @@ export const TaskBoardPage: React.FC = () => {
           setSimilarSearchError(null);
         } else {
           setSimilarTasks([]);
-          setSimilarSearchError(response.message || '语义查重暂不可用，不影响继续创建任务');
+          setSimilarSearchError(resolveSimilaritySearchErrorMessage({ response }));
         }
-      } catch {
+      } catch (error) {
         if (currentSeq !== similarSearchSeqRef.current) {
           return;
         }
         setSimilarTasks([]);
-        setSimilarSearchError('语义查重暂不可用，不影响继续创建任务');
+        setSimilarSearchError(resolveSimilaritySearchErrorMessage({ error }));
       } finally {
         if (currentSeq === similarSearchSeqRef.current) {
           setIsSearchingSimilar(false);

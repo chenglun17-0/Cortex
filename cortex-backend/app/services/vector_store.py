@@ -9,6 +9,11 @@
 import logging
 from typing import List, Optional
 from datetime import datetime
+import hashlib
+import math
+import re
+from difflib import SequenceMatcher
+from importlib.metadata import PackageNotFoundError, version as pkg_version
 
 from pgvector.asyncpg import register_vector
 import asyncpg
@@ -19,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Embedding 模型（使用轻量级模型，本地运行）
 _EMBEDDING_MODEL = None
+_EMBEDDING_BACKEND = "sentence_transformers"
 _EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 的维度
 _MAX_TEXT_LENGTH = 2000  # 最大文本长度限制
 
@@ -28,11 +34,61 @@ _db_pool: Optional[asyncpg.Pool] = None
 
 def get_embedding_model():
     """获取 embedding 模型（懒加载）"""
-    global _EMBEDDING_MODEL
+    global _EMBEDDING_MODEL, _EMBEDDING_BACKEND
+    if _EMBEDDING_BACKEND == "hash":
+        return None
     if _EMBEDDING_MODEL is None:
-        from sentence_transformers import SentenceTransformer
-        _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            torch_version = pkg_version("torch")
+            match = re.match(r"^(\d+)\.(\d+)", torch_version)
+            if not match:
+                raise ValueError(f"invalid torch version: {torch_version}")
+            major = int(match.group(1))
+            minor = int(match.group(2))
+            if major < 2 or (major == 2 and minor < 4):
+                logger.warning("检测到 torch=%s (<2.4)，启用 hash embedding fallback", torch_version)
+                _EMBEDDING_BACKEND = "hash"
+                return None
+        except PackageNotFoundError:
+            logger.warning("未检测到 torch，启用 hash embedding fallback")
+            _EMBEDDING_BACKEND = "hash"
+            return None
+        except Exception as e:
+            logger.warning("torch 版本检测失败，启用 hash embedding fallback: %s", e)
+            _EMBEDDING_BACKEND = "hash"
+            return None
+
+        try:
+            from sentence_transformers import SentenceTransformer
+            _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            logger.warning("sentence-transformers 初始化失败，切换到 hash embedding fallback: %s", e)
+            _EMBEDDING_BACKEND = "hash"
+            return None
     return _EMBEDDING_MODEL
+
+
+def _tokenize_text(text: str) -> List[str]:
+    tokens = re.findall(r"[a-zA-Z0-9_]+|[\u4e00-\u9fff]+", text.lower())
+    return tokens or [text.lower()]
+
+
+def _generate_hash_embedding(text: str) -> List[float]:
+    """
+    无第三方模型依赖的兜底 embedding。
+    使用哈希 trick 生成固定维度向量并做 L2 归一化。
+    """
+    vector = [0.0] * _EMBEDDING_DIM
+    for token in _tokenize_text(text):
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        index = int.from_bytes(digest[:4], "big") % _EMBEDDING_DIM
+        sign = 1.0 if digest[4] % 2 == 0 else -1.0
+        vector[index] += sign
+
+    norm = math.sqrt(sum(v * v for v in vector))
+    if norm > 0:
+        vector = [v / norm for v in vector]
+    return vector
 
 
 async def get_db_pool() -> asyncpg.Pool:
@@ -82,13 +138,76 @@ async def generate_embedding(text: str) -> List[float]:
     # 截断过长的文本
     text = _truncate_text(text)
 
+    global _EMBEDDING_BACKEND
+    model = get_embedding_model()
+    if model is None:
+        return _generate_hash_embedding(text)
+
     try:
-        model = get_embedding_model()
         embedding = model.encode(text, normalize_embeddings=True)
         return embedding.tolist()
     except Exception as e:
-        logger.error(f"生成 embedding 失败: {e}")
-        raise RuntimeError(f"生成 embedding 失败: {e}") from e
+        logger.warning("生成 embedding 失败，切换到 hash embedding fallback: %s", e)
+        _EMBEDDING_BACKEND = "hash"
+        return _generate_hash_embedding(text)
+
+
+async def _search_similar_tasks_by_text(
+    conn: asyncpg.Connection,
+    text_content: str,
+    exclude_task_id: Optional[int] = None,
+    limit: int = 5,
+    threshold: float = 0.5,
+) -> List[dict]:
+    """
+    在 embedding 模型不可用时，使用纯文本相似度兜底。
+    """
+    sql = """
+        SELECT
+            t.id AS task_id,
+            t.title,
+            t.description,
+            t.status,
+            t.priority,
+            t.project_id,
+            t.created_at
+        FROM tasks t
+        WHERE t.id != $1
+            AND (t.deleted_at IS NULL)
+        ORDER BY t.updated_at DESC, t.id DESC
+        LIMIT 500
+    """
+    rows = await conn.fetch(sql, exclude_task_id or 0)
+    query_text = " ".join(text_content.split()).lower()
+    if not query_text:
+        return []
+
+    results = []
+    for row in rows:
+        title_text = " ".join((row["title"] or "").split()).lower()
+        description_text = " ".join((row["description"] or "").split()).lower()
+        candidate_text = f"{title_text} {description_text}".strip()
+        if not candidate_text:
+            continue
+
+        full_similarity = SequenceMatcher(None, query_text, candidate_text).ratio()
+        title_similarity = SequenceMatcher(None, query_text, title_text).ratio() if title_text else 0.0
+        similarity = max(full_similarity, title_similarity)
+        if similarity < threshold:
+            continue
+        results.append({
+            "task_id": row["task_id"],
+            "title": row["title"],
+            "description": row["description"],
+            "status": row["status"],
+            "priority": row["priority"],
+            "project_id": row["project_id"],
+            "similarity": round(similarity, 3),
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        })
+
+    results.sort(key=lambda item: item["similarity"], reverse=True)
+    return results[:limit]
 
 
 async def init_pgvector():
@@ -184,15 +303,21 @@ async def search_similar_tasks(
     Raises:
         RuntimeError: 生成 embedding 失败时抛出
     """
-    try:
-        query_embedding = await generate_embedding(text_content)
-    except RuntimeError:
-        raise
+    query_embedding = await generate_embedding(text_content)
 
     pool = await get_db_pool()
 
     try:
         async with pool.acquire() as conn:
+            if _EMBEDDING_BACKEND == "hash":
+                return await _search_similar_tasks_by_text(
+                    conn=conn,
+                    text_content=text_content,
+                    exclude_task_id=exclude_task_id,
+                    limit=limit,
+                    threshold=threshold,
+                )
+
             await register_vector(conn)
 
             # 构建查询（使用余弦相似度）
@@ -209,7 +334,7 @@ async def search_similar_tasks(
                     t.project_id,
                     t.created_at
                 FROM task_embeddings te
-                JOIN task t ON te.task_id = t.id
+                JOIN tasks t ON te.task_id = t.id
                 WHERE te.task_id != $2
                     AND (t.deleted_at IS NULL)
                     AND (te.embedding <=> $1::vector) <= $4
@@ -238,8 +363,6 @@ async def search_similar_tasks(
                 })
 
             return results
-    except RuntimeError:
-        raise
     except Exception as e:
         logger.error(f"搜索相似任务失败: {e}")
         return []
