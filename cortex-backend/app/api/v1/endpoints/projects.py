@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from tortoise.expressions import Q
 from app.schemas.project import (
     ProjectCreate, ProjectRead, ProjectUpdate, ProjectMemberResponse
 )
@@ -74,10 +73,22 @@ async def read_my_projects(
         current_user: User = Depends(get_current_user)
 ):
     # 查询我可见的所有项目（负责人或成员，不包含已删除的）
+    joined_project_ids = await ProjectMember.filter(
+        user_id=current_user.id
+    ).values_list("project_id", flat=True)
+    owned_project_ids = await Project.filter(
+        owner_id=current_user.id,
+        deleted_at__isnull=True,
+    ).values_list("id", flat=True)
+    visible_project_ids = sorted(set(joined_project_ids) | set(owned_project_ids))
+
+    if not visible_project_ids:
+        return []
+
     projects = await Project.filter(
-        Q(owner_id=current_user.id) | Q(members__id=current_user.id),
-        deleted_at__isnull=True
-    ).distinct().all()
+        id__in=visible_project_ids,
+        deleted_at__isnull=True,
+    ).order_by("-updated_at", "-id").all()
 
     # 格式化返回数据
     result = []

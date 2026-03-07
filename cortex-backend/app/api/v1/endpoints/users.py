@@ -55,11 +55,17 @@ async def create_user(user: UserCreate):
 
 @router.get("/search", response_model=List[User])
 async def search_users(
-    q: str = Query(..., min_length=1, description="搜索关键字"),
+    q: str = Query("", description="搜索关键字（可为空）"),
     current_user: UserModel = Depends(get_current_user)
 ):
     """
-    按用户名搜索用户
+    按用户名搜索用户（默认返回当前组织下前 20 个可添加成员）
     """
-    users = await UserModel.filter(username__icontains=q).limit(20).all()
+    query_text = q.strip()
+
+    users_qs = UserModel.filter(organization_id=current_user.organization_id)
+    if query_text:
+        users_qs = users_qs.filter(username__icontains=query_text)
+
+    users = await users_qs.exclude(id=current_user.id).limit(20).all()
     return users
