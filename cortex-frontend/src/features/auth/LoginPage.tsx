@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message, Layout } from 'antd';
-import { UserOutlined, LockOutlined, RocketOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { UserOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { http } from '../../lib/http';
+import './LoginPage.css';
 
 
 const { Title, Text } = Typography;
-const { Content } = Layout;
 
 export const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     const onFinish = async (values: { username: string; password: string }) => {
-        setLoading (true);
+        setLoading(true);
         try {
             const formData = new FormData();
             formData.append('username', values.username);
@@ -38,32 +38,26 @@ export const LoginPage: React.FC = () => {
     };
 
     return (
-    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}>
-      <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-        <Card
-          variant="borderless"
-          style={{
-            width: 400,
-            borderRadius: 16,
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-          }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ 
-              width: 64, 
-              height: 64, 
-              background: '#6366f1', 
-              borderRadius: 12, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              margin: '0 auto 16px',
-              boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)'
-            }}>
-              <RocketOutlined style={{ fontSize: 32, color: '#fff' }} />
-            </div>
-            <Title level={2} style={{ margin: 0, color: '#1e293b' }}>Cortex</Title>
-            <Text type="secondary">智能项目协作平台</Text>
+    <div className="login-page">
+      <div className="login-page__mesh" />
+      <div className="login-page__blob login-page__blob--one" />
+      <div className="login-page__blob login-page__blob--two" />
+
+      <main className="login-page__content">
+        <section className="login-brand">
+          <div className="login-brand__badge">Project Intelligence Platform</div>
+          <Title level={1} className="login-brand__title">Cortex</Title>
+          <Text className="login-brand__desc">AI 驱动的项目协作与任务管理工作台</Text>
+          <ul className="login-brand__list">
+            <li><CheckCircleOutlined /> 统一任务看板与项目协同</li>
+            <li><CheckCircleOutlined /> AI 语义查重与审查回写</li>
+            <li><CheckCircleOutlined /> 清晰的成员权限与责任边界</li>
+          </ul>
+        </section>
+
+        <Card variant="borderless" className="login-card">
+          <div className="login-card__header">
+            <Title level={2} className="login-card__title">欢迎登录</Title>
           </div>
 
           <Form
@@ -77,10 +71,10 @@ export const LoginPage: React.FC = () => {
               name="username"
               rules={[{ required: true, message: '请输入您的邮箱/用户名！' }]}
             >
-              <Input 
-                prefix={<UserOutlined style={{ color: '#94a3b8' }} />} 
-                placeholder="邮箱 / 用户名" 
-                style={{ borderRadius: 8 }}
+              <Input
+                prefix={<UserOutlined className="login-card__icon" />}
+                placeholder="邮箱 / 用户名"
+                className="login-card__input"
               />
             </Form.Item>
 
@@ -88,40 +82,33 @@ export const LoginPage: React.FC = () => {
               name="password"
               rules={[{ required: true, message: '请输入密码！' }]}
             >
-              <Input.Password 
-                prefix={<LockOutlined style={{ color: '#94a3b8' }} />} 
-                placeholder="密码" 
-                style={{ borderRadius: 8 }}
+              <Input.Password
+                prefix={<LockOutlined className="login-card__icon" />}
+                placeholder="密码"
+                className="login-card__input"
               />
             </Form.Item>
 
-            <Form.Item style={{ marginTop: 8 }}>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                block 
+            <Form.Item style={{ marginTop: 8, marginBottom: 10 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
                 loading={loading}
-                style={{ 
-                  height: 48, 
-                  borderRadius: 8, 
-                  fontSize: 16, 
-                  fontWeight: 600,
-                  background: '#6366f1',
-                  boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.2)'
-                }}
+                className="login-card__submit"
               >
                 进入系统
               </Button>
             </Form.Item>
-            
-            <div style={{ textAlign: 'center' }}>
-               <Text type="secondary" style={{ fontSize: '14px' }}>
+
+            <div className="login-card__footer">
+               <Text>
                  还没有账号？请联系系统管理员
                </Text>
             </div>
           </Form>
         </Card>
-      </Content>
-    </Layout>
+      </main>
+    </div>
   );
 };
