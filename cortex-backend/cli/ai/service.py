@@ -5,6 +5,8 @@ AI Service Module
 - Commit Message 生成（遵循 Conventional Commits 规范）
 - PR Description 生成
 """
+import importlib.util
+import os
 import re
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
@@ -18,6 +20,16 @@ from cli.config import (
     AI_API_KEY,
     AI_MODEL,
     AI_BASE_URL,
+)
+
+
+SOCKS_PROXY_ENV_KEYS = (
+    "ALL_PROXY",
+    "all_proxy",
+    "HTTPS_PROXY",
+    "https_proxy",
+    "HTTP_PROXY",
+    "http_proxy",
 )
 
 
@@ -237,6 +249,30 @@ class LocalModelService(AIService):
 
 # ============== Factory Function ==============
 
+
+def _get_socks_proxy_keys() -> list[str]:
+    proxy_keys: list[str] = []
+    for key in SOCKS_PROXY_ENV_KEYS:
+        value = os.environ.get(key)
+        if value and value.lower().startswith("socks"):
+            proxy_keys.append(key)
+    return proxy_keys
+
+
+def _ensure_socks_proxy_support():
+    proxy_keys = _get_socks_proxy_keys()
+    if not proxy_keys:
+        return
+
+    if importlib.util.find_spec("socksio") is not None:
+        return
+
+    joined_keys = ", ".join(proxy_keys)
+    raise RuntimeError(
+        f"检测到 SOCKS 代理配置（{joined_keys}），但当前环境未安装代理依赖。请安装 `httpx[socks]` 后重试。"
+    )
+
+
 def get_ai_service(provider: Optional[str] = None) -> Optional[AIService]:
     """
     获取 AI 服务实例
@@ -261,6 +297,7 @@ def get_ai_service(provider: Optional[str] = None) -> Optional[AIService]:
     base_url = get_config_value(AI_BASE_URL)
 
     provider = provider.lower()
+    _ensure_socks_proxy_support()
 
     # 如果 provider 是 anthropic 且 base_url 包含 minimaxi，使用 AnthropicService
     if provider == "anthropic" and base_url:
@@ -291,11 +328,10 @@ def generate_commit_message(diff: str, task_title: str) -> Optional[str]:
     Returns:
         生成的 commit message，失败返回 None
     """
-    service = get_ai_service()
-    if not service:
-        return None
-
     try:
+        service = get_ai_service()
+        if not service:
+            return None
         return service.generate_commit_message(diff, task_title)
     except Exception:
         return None
@@ -321,12 +357,10 @@ def generate_pr_description(
     Returns:
         生成的 PR 描述
     """
-    service = get_ai_service()
-    if not service:
-        # 返回默认描述
-        return f"Task #{task_id}\n\n{task_description}"
-
     try:
+        service = get_ai_service()
+        if not service:
+            return f"Task #{task_id}\n\n{task_description}"
         return service.generate_pr_description(
             diff=diff,
             task_id=task_id,

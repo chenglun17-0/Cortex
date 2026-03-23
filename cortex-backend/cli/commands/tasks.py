@@ -534,6 +534,20 @@ def generate_random_branch_name(task_id: int, branch_type: str = "feature") -> s
     return f"{branch_type}/task-{task_id}-{random_suffix}"
 
 
+def _should_publish_review_result(result) -> bool:
+    summary = getattr(result, "summary", "") or ""
+    if summary.startswith("审查出错:"):
+        raise RuntimeError(summary)
+
+    if summary == "AI 服务未配置，跳过审查":
+        return False
+
+    if getattr(result, "issues", None):
+        return True
+
+    return bool(getattr(result, "raw_content", ""))
+
+
 def _publish_review_to_pr(pr_number: int, diff: str, task_id: int = None, api_client=None):
     """将 AI 审查结果发布到 PR 评论区"""
     # 检查是否启用 AI 审查
@@ -566,6 +580,9 @@ def _publish_review_to_pr(pr_number: int, diff: str, task_id: int = None, api_cl
     try:
         # 执行代码审查
         result = review_code(diff)
+        if not _should_publish_review_result(result):
+            console.print(f"[blue]ℹ️  跳过发布 AI 审查：{result.summary}[/blue]")
+            return
 
         # 获取 PR Comment Provider
         comment_provider = get_pr_comment_provider(provider_type, token, remote_url)

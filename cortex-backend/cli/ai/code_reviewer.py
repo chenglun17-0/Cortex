@@ -165,5 +165,13 @@ def review_code(diff: str) -> CodeReviewResult:
     Returns:
         审查结果
     """
-    reviewer = get_code_reviewer()
-    return reviewer.review(diff)
+    try:
+        reviewer = get_code_reviewer()
+        return reviewer.review(diff)
+    except Exception as e:
+        return CodeReviewResult(
+            summary=f"审查出错: {str(e)}",
+            raw_content="",
+            issues=[],
+            score=100,
+        )
