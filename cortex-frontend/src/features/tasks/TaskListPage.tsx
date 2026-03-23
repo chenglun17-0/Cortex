@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Table, Tag, Button, Space, Input, Select, Card, Breadcrumb } from 'antd';
-import { SearchOutlined, EyeOutlined, BorderlessTableOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { getMyTasks } from './service';
+import { Typography, Table, Tag, Button, Space, Input, Select, Card, Breadcrumb, Popconfirm, message } from 'antd';
+import { SearchOutlined, EyeOutlined, BorderlessTableOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { deleteTask, getMyTasks } from './service';
 import { getProjects } from '../projects/service';
 import type { Task } from '../../types';
 import type { Project } from '../../types';
@@ -15,6 +15,7 @@ const { Option } = Select;
 
 export const TaskListPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [searchText, setSearchText] = useState('');
@@ -39,6 +40,23 @@ export const TaskListPage: React.FC = () => {
   }, [projects]);
 
   const isLoading = isLoadingTasks || isLoadingProjects;
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: async (_data, deletedTaskId) => {
+      await queryClient.cancelQueries({ queryKey: ['task', deletedTaskId], exact: true });
+      await queryClient.cancelQueries({ queryKey: ['task-comments', deletedTaskId] });
+      await queryClient.cancelQueries({ queryKey: ['task-ai-review-comments', deletedTaskId] });
+
+      queryClient.removeQueries({ queryKey: ['task', deletedTaskId], exact: true });
+      queryClient.removeQueries({ queryKey: ['task-comments', deletedTaskId] });
+      queryClient.removeQueries({ queryKey: ['task-ai-review-comments', deletedTaskId] });
+
+      message.success('任务删除成功');
+      queryClient.invalidateQueries({ queryKey: ['myTasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
 
   // 过滤任务
   const filteredTasks = tasks.filter((task) => {
@@ -110,7 +128,7 @@ export const TaskListPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 240,
       render: (_: unknown, record: Task) => (
         <Space size="small">
           <Button
@@ -129,6 +147,27 @@ export const TaskListPage: React.FC = () => {
           >
             看板
           </Button>
+          <Popconfirm
+            title="删除任务"
+            description={`确认删除任务 #${record.id} 吗？`}
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{
+              danger: true,
+              loading: deleteMutation.isPending && deleteMutation.variables === record.id,
+            }}
+            onConfirm={() => deleteMutation.mutateAsync(record.id)}
+          >
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              loading={deleteMutation.isPending && deleteMutation.variables === record.id}
+            >
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

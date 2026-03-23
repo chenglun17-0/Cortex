@@ -49,7 +49,7 @@ class TasksReviewSyncTests(unittest.TestCase):
         )
 
     def test_publish_review_skips_task_comment_sync_without_task_id(self):
-        review_result = SimpleNamespace(score=88, summary="通过", issues=[])
+        review_result = SimpleNamespace(score=88, summary="通过", issues=[], raw_content="review body")
         provider = Mock()
         api_client = Mock()
 
@@ -63,7 +63,7 @@ class TasksReviewSyncTests(unittest.TestCase):
         api_client.post.assert_not_called()
 
     def test_publish_review_warns_but_does_not_raise_when_task_comment_sync_fails(self):
-        review_result = SimpleNamespace(score=75, summary="存在需关注项", issues=[])
+        review_result = SimpleNamespace(score=75, summary="存在需关注项", issues=[], raw_content="review body")
         provider = Mock()
         api_client = Mock()
         api_client.post.side_effect = RuntimeError("network error")
@@ -80,7 +80,7 @@ class TasksReviewSyncTests(unittest.TestCase):
         )
 
     def test_publish_review_warns_when_task_comment_sync_returns_non_2xx(self):
-        review_result = SimpleNamespace(score=80, summary="需优化", issues=[])
+        review_result = SimpleNamespace(score=80, summary="需优化", issues=[], raw_content="review body")
         provider = Mock()
         api_client = Mock()
         api_client.post.return_value = SimpleNamespace(status_code=500)
@@ -97,7 +97,7 @@ class TasksReviewSyncTests(unittest.TestCase):
         )
 
     def test_publish_review_accepts_201_when_task_comment_sync_succeeds(self):
-        review_result = SimpleNamespace(score=96, summary="表现优秀", issues=[])
+        review_result = SimpleNamespace(score=96, summary="表现优秀", issues=[], raw_content="review body")
         provider = Mock()
         api_client = Mock()
         api_client.post.return_value = SimpleNamespace(status_code=201)
@@ -111,6 +111,51 @@ class TasksReviewSyncTests(unittest.TestCase):
 
         self.assertFalse(
             any("同步任务评论失败" in str(call.args[0]) for call in mock_print.call_args_list)
+        )
+
+    def test_publish_review_skips_when_review_result_has_no_publishable_content(self):
+        review_result = SimpleNamespace(
+            score=100,
+            summary="AI 服务未配置，跳过审查",
+            issues=[],
+            raw_content="",
+        )
+        provider = Mock()
+        api_client = Mock()
+
+        with patch.object(tasks_command, "get_config_value", side_effect=self._mock_config()), patch.object(
+            tasks_command, "get_remote_url", return_value="https://github.com/example/repo"
+        ), patch.object(tasks_command, "review_code", return_value=review_result), patch.object(
+            tasks_command, "get_pr_comment_provider", return_value=provider
+        ), patch.object(tasks_command.console, "print") as mock_print:
+            tasks_command._publish_review_to_pr(13, "diff", task_id=25, api_client=api_client)
+
+        provider.create_review_comment.assert_not_called()
+        api_client.post.assert_not_called()
+        self.assertTrue(
+            any("跳过发布 AI 审查" in str(call.args[0]) for call in mock_print.call_args_list)
+        )
+
+    def test_publish_review_warns_and_skips_when_review_result_contains_error_summary(self):
+        review_result = SimpleNamespace(
+            score=100,
+            summary="审查出错: 检测到 SOCKS 代理配置，但当前环境未安装代理依赖",
+            issues=[],
+            raw_content="",
+        )
+        api_client = Mock()
+
+        with patch.object(tasks_command, "get_config_value", side_effect=self._mock_config()), patch.object(
+            tasks_command, "get_remote_url", return_value="https://github.com/example/repo"
+        ), patch.object(tasks_command, "review_code", return_value=review_result), patch.object(
+            tasks_command, "get_pr_comment_provider"
+        ) as mock_provider, patch.object(tasks_command.console, "print") as mock_print:
+            tasks_command._publish_review_to_pr(14, "diff", task_id=26, api_client=api_client)
+
+        mock_provider.assert_not_called()
+        api_client.post.assert_not_called()
+        self.assertTrue(
+            any("AI 审查发布失败" in str(call.args[0]) for call in mock_print.call_args_list)
         )
 
 

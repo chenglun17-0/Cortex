@@ -42,6 +42,22 @@ console = Console()
 BRANCH_TYPES = ["feature", "bug", "docs", "fix", "chore", "refactor"]
 BRANCH_PATTERN = re.compile(r"(feature|bug|docs|fix|chore|refactor)/task-(\d+)-")
 
+
+def _format_api_error(response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return response.text or "Unknown error"
+
+    if not isinstance(payload, dict):
+        return json.dumps(payload, ensure_ascii=False)
+
+    detail = payload.get("detail")
+    if isinstance(detail, str) and detail.strip():
+        return detail
+
+    return json.dumps(payload, ensure_ascii=False)
+
 @app.command(name="new")
 def create_task(
     title: str = typer.Argument(..., help="任务标题"),
@@ -150,6 +166,29 @@ def list_tasks(json_output: bool = typer.Option(False, "--json", help="以 JSON 
         )
 
     console.print(table)
+
+
+@app.command(name="delete")
+def delete_task_by_id(task_id: int):
+    """
+    删除任务:
+    1. 按任务 ID 调用后端删除接口
+    2. 删除前要求用户显式确认
+    """
+    api = client()
+
+    console.print(f"[yellow]⚠️  You are about to delete task #{task_id}.[/yellow]")
+    confirmed = typer.confirm("Delete this task?", default=False)
+    if not confirmed:
+        console.print("[blue]ℹ️  Deletion cancelled.[/blue]")
+        raise typer.Exit(0)
+
+    response = api.delete(f"/tasks/{task_id}")
+    if response.status_code != 200:
+        console.print(f"[red]Failed to delete task #{task_id}: {_format_api_error(response)}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]✔ Task #{task_id} deleted successfully.[/green]")
 
 @app.command()
 def start(task_id: int, use_worktree: bool = typer.Option(None, "--worktree/--no-worktree", help="是否使用 worktree")):
@@ -495,6 +534,20 @@ def generate_random_branch_name(task_id: int, branch_type: str = "feature") -> s
     return f"{branch_type}/task-{task_id}-{random_suffix}"
 
 
+def _should_publish_review_result(result) -> bool:
+    summary = getattr(result, "summary", "") or ""
+    if summary.startswith("审查出错:"):
+        raise RuntimeError(summary)
+
+    if summary == "AI 服务未配置，跳过审查":
+        return False
+
+    if getattr(result, "issues", None):
+        return True
+
+    return bool(getattr(result, "raw_content", ""))
+
+
 def _publish_review_to_pr(pr_number: int, diff: str, task_id: int = None, api_client=None):
     """将 AI 审查结果发布到 PR 评论区"""
     # 检查是否启用 AI 审查
@@ -527,6 +580,9 @@ def _publish_review_to_pr(pr_number: int, diff: str, task_id: int = None, api_cl
     try:
         # 执行代码审查
         result = review_code(diff)
+        if not _should_publish_review_result(result):
+            console.print(f"[blue]ℹ️  跳过发布 AI 审查：{result.summary}[/blue]")
+            return
 
         # 获取 PR Comment Provider
         comment_provider = get_pr_comment_provider(provider_type, token, remote_url)
