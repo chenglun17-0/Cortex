@@ -23,9 +23,10 @@ import {
   BorderlessTableOutlined,
   SaveOutlined,
   CloseOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getTaskById, updateTask, getTaskComments, createTaskComment } from './service';
+import { getTaskById, updateTask, getTaskComments, createTaskComment, deleteTask } from './service';
 import { getProjectMembers, getProjects } from '../projects/service';
 import type { Project, TaskComment, TaskUpdate, User } from '../../types';
 import { TaskStatus } from '../../types';
@@ -81,6 +82,7 @@ export const TaskDetailPage: React.FC = () => {
   const hasValidTaskId = Number.isInteger(parsedTaskId) && parsedTaskId > 0;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isTaskDeleted, setIsTaskDeleted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [commentPage, setCommentPage] = useState(1);
   const [commentPageSize, setCommentPageSize] = useState(10);
@@ -90,7 +92,7 @@ export const TaskDetailPage: React.FC = () => {
   const { data: task, isLoading, error, isSuccess: isTaskLoaded } = useQuery({
     queryKey: ['task', parsedTaskId],
     queryFn: () => getTaskById(parsedTaskId),
-    enabled: hasValidTaskId,
+    enabled: hasValidTaskId && !isTaskDeleted,
   });
 
   const { data: projects = [] } = useQuery({
@@ -114,12 +116,12 @@ export const TaskDetailPage: React.FC = () => {
   } = useQuery({
     queryKey: ['task-comments', parsedTaskId, commentPage, commentPageSize],
     queryFn: () => getTaskComments(parsedTaskId, commentPage, commentPageSize),
-    enabled: hasValidTaskId && isTaskLoaded,
+    enabled: hasValidTaskId && isTaskLoaded && !isTaskDeleted,
   });
   const { data: aiReviewCommentsData } = useQuery({
     queryKey: ['task-ai-review-comments', parsedTaskId],
     queryFn: () => getTaskComments(parsedTaskId, 1, 50),
-    enabled: hasValidTaskId && isTaskLoaded,
+    enabled: hasValidTaskId && isTaskLoaded && !isTaskDeleted,
   });
   const latestAiReview = useMemo(() => {
     const parsedReviews = (aiReviewCommentsData?.items ?? [])
@@ -187,6 +189,24 @@ export const TaskDetailPage: React.FC = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: async (_data, deletedTaskId) => {
+      setIsTaskDeleted(true);
+      await queryClient.cancelQueries({ queryKey: ['task', deletedTaskId], exact: true });
+      await queryClient.cancelQueries({ queryKey: ['task-comments', deletedTaskId] });
+      await queryClient.cancelQueries({ queryKey: ['task-ai-review-comments', deletedTaskId] });
+
+      message.success('任务删除成功');
+      queryClient.invalidateQueries({ queryKey: ['myTasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', deletedTaskId], exact: true, refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', deletedTaskId], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['task-ai-review-comments', deletedTaskId], refetchType: 'none' });
+      navigate('/tasks', { replace: true });
+    },
+  });
+
   const handleEdit = () => {
     form.setFieldsValue({
       title: task?.title,
@@ -220,6 +240,19 @@ export const TaskDetailPage: React.FC = () => {
     }
   };
 
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '删除任务',
+      content: `确认删除任务 #${parsedTaskId} 吗？删除后任务将从列表与看板中隐藏。`,
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true, icon: <DeleteOutlined /> },
+      onOk: async () => {
+        await deleteMutation.mutateAsync(parsedTaskId);
+      },
+    });
+  };
+
   if (!hasValidTaskId) {
     return (
       <Alert
@@ -233,6 +266,14 @@ export const TaskDetailPage: React.FC = () => {
           </Button>
         }
       />
+    );
+  }
+
+  if (isTaskDeleted) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 240 }}>
+        <Spin size="large" />
+      </div>
     );
   }
 
@@ -342,6 +383,14 @@ export const TaskDetailPage: React.FC = () => {
             onClick={() => navigate(`/projects/${task.project_id}`)}
           >
             查看看板
+          </Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            loading={deleteMutation.isPending}
+            onClick={handleDelete}
+          >
+            删除
           </Button>
         </Space>
       </div>

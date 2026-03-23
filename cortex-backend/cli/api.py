@@ -28,5 +28,10 @@ class APIClient:
         """发送 PATCH 请求"""
         headers = {"Authorization": f"Bearer {self.token}"}
         return requests.patch(f"{self.api_url}{endpoint}", headers=headers, json=json_data)
+
+    def delete(self, endpoint: str):
+        """发送 DELETE 请求"""
+        headers = {"Authorization": f"Bearer {self.token}"}
+        return requests.delete(f"{self.api_url}{endpoint}", headers=headers)
 # 全局单例
 client = APIClient

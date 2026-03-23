@@ -24,6 +24,11 @@ export const updateTask = async (taskId: number, data: TaskUpdate): Promise<Task
   return response.data;
 };
 
+export const deleteTask = async (taskId: number): Promise<{ message: string }> => {
+  const response = await http.delete<{ message: string }>(`/tasks/${taskId}`);
+  return response.data;
+};
+
 export const createTask = async (data: TaskCreate): Promise<Task> => {
   const response = await http.post<Task>('/tasks/', data);
   return response.data;

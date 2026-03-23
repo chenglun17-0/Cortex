@@ -42,6 +42,22 @@ console = Console()
 BRANCH_TYPES = ["feature", "bug", "docs", "fix", "chore", "refactor"]
 BRANCH_PATTERN = re.compile(r"(feature|bug|docs|fix|chore|refactor)/task-(\d+)-")
 
+
+def _format_api_error(response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return response.text or "Unknown error"
+
+    if not isinstance(payload, dict):
+        return json.dumps(payload, ensure_ascii=False)
+
+    detail = payload.get("detail")
+    if isinstance(detail, str) and detail.strip():
+        return detail
+
+    return json.dumps(payload, ensure_ascii=False)
+
 @app.command(name="new")
 def create_task(
     title: str = typer.Argument(..., help="任务标题"),
@@ -150,6 +166,29 @@ def list_tasks(json_output: bool = typer.Option(False, "--json", help="以 JSON 
         )
 
     console.print(table)
+
+
+@app.command(name="delete")
+def delete_task_by_id(task_id: int):
+    """
+    删除任务:
+    1. 按任务 ID 调用后端删除接口
+    2. 删除前要求用户显式确认
+    """
+    api = client()
+
+    console.print(f"[yellow]⚠️  You are about to delete task #{task_id}.[/yellow]")
+    confirmed = typer.confirm("Delete this task?", default=False)
+    if not confirmed:
+        console.print("[blue]ℹ️  Deletion cancelled.[/blue]")
+        raise typer.Exit(0)
+
+    response = api.delete(f"/tasks/{task_id}")
+    if response.status_code != 200:
+        console.print(f"[red]Failed to delete task #{task_id}: {_format_api_error(response)}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]✔ Task #{task_id} deleted successfully.[/green]")
 
 @app.command()
 def start(task_id: int, use_worktree: bool = typer.Option(None, "--worktree/--no-worktree", help="是否使用 worktree")):
