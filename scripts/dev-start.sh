@@ -54,7 +54,7 @@ source .venv/bin/activate
 # 加载 .env 文件中的环境变量
 export $(grep -v '^#' .env | xargs)
 
-nohup uvicorn app.main:app --reload > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
+nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 deactivate
 
@@ -83,7 +83,7 @@ if [ ! -d "node_modules" ]; then
     exit 1
 fi
 
-nohup npm run dev > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
+nohup npm run dev -- --host  > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
 echo -e "${GREEN}前端已启动 (PID: $FRONTEND_PID)${NC}"
