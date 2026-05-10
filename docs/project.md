@@ -262,3 +262,40 @@ anthropic = "^0.0.0"
 # celery = "^5.4.0"       # 异步任务队列
 # redis = "^5.0.0"        # 任务队列后端
 ```
+
+---
+
+## 五、开发环境配置
+
+### 本地连接远程数据库（SSH 隧道）
+
+开发时如需连接服务器上的 PostgreSQL 数据库，建议使用 SSH 隧道，避免暴露数据库端口到公网。
+
+#### 1. 建立 SSH 隧道
+
+在**本地终端**执行：
+
+```bash
+ssh -N -L 5433:localhost:5432 root@101.35.47.188
+```
+
+- `-N`：不执行远程命令，仅做端口转发
+- `-L 5433:localhost:5432`：将本地 5433 端口映射到服务器的 5432 端口
+
+终端会卡住（无输出），**保持运行**即可。
+
+#### 2. 配置本地数据库连接
+
+编辑本地 `cortex-backend/.env`：
+
+```bash
+DATABASE_URL=postgres://cortex:cortex_password@localhost:5433/cortex
+```
+
+#### 3. 测试连接
+
+```bash
+cd cortex-backend
+source .venv/bin/activate
+uv run aerich upgrade
+```
