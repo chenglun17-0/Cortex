@@ -41,10 +41,10 @@ Cortex 是一个专为研发团队设计的智能项目管理系统，将项目�
 
 ```bash
 # 启动前后端服务
-./scripts/dev-start.sh
+./scripts/start.sh
 
 # 停止前后端服务
-./scripts/dev-stop.sh
+./scripts/stop.sh
 
 # 查看日志
 tail -f logs/backend.log
