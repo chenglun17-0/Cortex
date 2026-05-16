@@ -297,7 +297,7 @@ export const KanbanBoard: React.FC = () => {
     const availableSearchResults = searchResults.filter((u: User) => !addedMemberIds.has(u.id));
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: 'calc(100vh - 160px)', minHeight: 520, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             {/* 顶部导航与操作 */}
             <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
@@ -442,7 +442,7 @@ export const KanbanBoard: React.FC = () => {
 
             {/* 拖拽上下文 */}
             <DragDropContext onDragEnd={onDragEnd}>
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 16, flex: 1 }}>
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'stretch', overflowX: 'auto', paddingBottom: 16, flex: 1, minHeight: 0 }}>
                     {KanbanColumns.map((col) => (
                         <Droppable key={col.id} droppableId={col.id}>
                             {(provided, snapshot) => (
@@ -454,7 +454,8 @@ export const KanbanBoard: React.FC = () => {
                                         padding: '12px',
                                         borderRadius: '12px',
                                         width: '320px',
-                                        minHeight: '600px',
+                                        height: '100%',
+                                        minHeight: 0,
                                         display: 'flex',
                                         flexDirection: 'column',
                                         border: '1px solid #e2e8f0',
@@ -482,7 +483,7 @@ export const KanbanBoard: React.FC = () => {
                                     </div>
 
                                     {/* 任务卡片列表 */}
-                                    <div style={{ flex: 1 }}>
+                                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
                                       {tasksByStatus[col.id]?.map((task, index) => (
                                           <Draggable key={task.id} draggableId={String(task.id)} index={index}>
                                               {(provided, snapshot) => (
